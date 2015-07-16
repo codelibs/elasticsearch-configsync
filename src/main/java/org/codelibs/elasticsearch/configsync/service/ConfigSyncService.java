@@ -1,10 +1,15 @@
 package org.codelibs.elasticsearch.configsync.service;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -38,7 +43,9 @@ import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.indices.IndexMissingException;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.sort.SortOrder;
 import org.elasticsearch.threadpool.ThreadPool;
+import org.elasticsearch.threadpool.ThreadPool.Names;
 
 public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncService> {
 
@@ -48,7 +55,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
 
     public static final String PATH = "path";
 
-    private static final String FILE_MAPPING_JSON = "/configsync/file_mapping.json";
+    private static final String FILE_MAPPING_JSON = "configsync/file_mapping.json";
 
     private final Client client;
 
@@ -96,7 +103,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
     }
 
     private void scheduleUpdater(final ConfigFileUpdater configFileUpdater) {
-        threadPool.scheduleWithFixedDelay(configFileUpdater, flushInterval);
+        threadPool.schedule(flushInterval, Names.SAME, configFileUpdater);
         if (logger.isDebugEnabled()) {
             logger.debug("Scheduled ConfigFileUpdater.");
         }
@@ -196,6 +203,26 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
         }
     }
 
+    public void getPaths(int from, int size, final ActionListener<List<String>> listener) {
+        client.prepareSearch(index).setTypes(type).setSize(size).setFrom(from).addField(PATH).addSort(TIMESTAMP, SortOrder.ASC)
+                .execute(new ActionListener<SearchResponse>() {
+
+                    @Override
+                    public void onResponse(SearchResponse response) {
+                        final List<String> pathList = new ArrayList<>();
+                        for (final SearchHit hit : response.getHits().getHits()) {
+                            pathList.add((String) hit.getFields().get(PATH).getValue());
+                        }
+                        listener.onResponse(pathList);
+                    }
+
+                    @Override
+                    public void onFailure(Throwable e) {
+                        listener.onFailure(e);
+                    }
+                });
+    }
+
     private String getId(final String path) {
         return Base64.encodeBytes(path.getBytes(Charsets.UTF_8));
     }
@@ -265,20 +292,35 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
 
         private void updateConfigFile(final Map<String, Object> source) {
             try {
-                final Date timestamp = (Date) source.get(TIMESTAMP);
+                final Date timestamp = getTimestamp(source.get(TIMESTAMP));
                 final String path = (String) source.get(PATH);
                 final Path filePath = Paths.get(configPath, path.replace("..", ""));
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Checking {0}", filePath);
+                    logger.debug("Checking " + filePath);
                 }
                 if (!Files.exists(filePath) || Files.getLastModifiedTime(filePath).toMillis() < timestamp.getTime()) {
                     final String content = (String) source.get(CONTENT);
+                    final File parentFile = filePath.toFile().getParentFile();
+                    if (!parentFile.exists() && !parentFile.mkdirs()) {
+                        logger.warn("Failed to create " + parentFile.getAbsolutePath());
+                    }
                     final String absolutePath = filePath.toFile().getAbsolutePath();
                     Base64.decodeToFile(content, absolutePath);
-                    logger.info("Update {0}", absolutePath);
+                    logger.info("Updated " + absolutePath);
                 }
             } catch (final Exception e) {
-                logger.warn("Failed to update {0}.", e, source.get(PATH));
+                logger.warn("Failed to update " + source.get(PATH), e);
+            }
+        }
+
+        private Date getTimestamp(final Object value) throws ParseException {
+            if (value instanceof Date) {
+                return (Date) value;
+            } else if (value instanceof Number) {
+                return new Date(((Number) value).longValue());
+            } else {
+                final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+                return sdf.parse(value.toString());
             }
         }
 
@@ -289,8 +331,28 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
         }
     }
 
-    public void getContent(final String path, final ActionListener<GetResponse> listener) {
-        client.prepareGet(index, type, getId(path)).execute(listener);
+    public void getContent(final String path, final ActionListener<byte[]> listener) {
+        client.prepareGet(index, type, getId(path)).execute(new ActionListener<GetResponse>() {
+
+            @Override
+            public void onResponse(GetResponse response) {
+                if (response.isExists()) {
+                    try {
+                        final byte[] configContent = Base64.decode((String) response.getSource().get(ConfigSyncService.CONTENT));
+                        listener.onResponse(configContent);
+                    } catch (final IOException e) {
+                        throw new IORuntimeException("Failed to access the content.", e);
+                    }
+                } else {
+                    listener.onResponse(null);
+                }
+            }
+
+            @Override
+            public void onFailure(Throwable e) {
+                listener.onFailure(e);
+            }
+        });
     }
 
     public void delete(final String path, final ActionListener<DeleteResponse> listener) {

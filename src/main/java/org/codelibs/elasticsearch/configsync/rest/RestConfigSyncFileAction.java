@@ -5,6 +5,7 @@ import static org.elasticsearch.rest.RestStatus.OK;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.codelibs.elasticsearch.configsync.exception.IORuntimeException;
@@ -12,7 +13,6 @@ import org.codelibs.elasticsearch.configsync.exception.InvalidRequestException;
 import org.codelibs.elasticsearch.configsync.service.ConfigSyncService;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.delete.DeleteResponse;
-import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.Base64;
@@ -50,39 +50,50 @@ public class RestConfigSyncFileAction extends BaseRestHandler {
             switch (request.method()) {
             case GET: {
                 String path = request.param(ConfigSyncService.PATH);
-                if (path == null) {
+                if (path == null && content != null && content.length() > 0) {
                     final Map<String, Object> sourceAsMap = SourceLookup.sourceAsMap(content);
                     path = (String) sourceAsMap.get(ConfigSyncService.PATH);
                 }
                 if (path == null) {
-                    sendErrorResponse(channel, new InvalidRequestException(ConfigSyncService.PATH + " is empty."));
-                    return;
-                }
-                configSyncService.getContent(path, new ActionListener<GetResponse>() {
+                    configSyncService.getPaths(request.paramAsInt("from", 0), request.paramAsInt("size", 10),
+                            new ActionListener<List<String>>() {
 
-                    @Override
-                    public void onResponse(final GetResponse response) {
-                        if (response.isExists()) {
-                            try {
-                                final byte[] configContent = Base64.decode((String) response.getSource().get(ConfigSyncService.CONTENT));
+                                @Override
+                                public void onResponse(List<String> response) {
+                                    final Map<String, Object> params = new HashMap<>();
+                                    params.put("path", response);
+                                    sendResponse(channel, params);
+                                }
+
+                                @Override
+                                public void onFailure(Throwable t) {
+                                    sendErrorResponse(channel, t);
+                                }
+                            });
+                } else {
+                    configSyncService.getContent(path, new ActionListener<byte[]>() {
+
+                        @Override
+                        public void onResponse(final byte[] configContent) {
+                            if (configContent != null) {
                                 channel.sendResponse(new BytesRestResponse(OK, "application/octet-stream", configContent));
-                            } catch (final IOException e) {
-                                throw new IORuntimeException("Failed to access the content.", e);
+                            } else {
+                                channel.sendResponse(new BytesRestResponse(NOT_FOUND));
                             }
-                        } else {
-                            channel.sendResponse(new BytesRestResponse(NOT_FOUND));
                         }
-                    }
 
-                    @Override
-                    public void onFailure(final Throwable t) {
-                        sendErrorResponse(channel, t);
-                    }
-                });
-
+                        @Override
+                        public void onFailure(final Throwable t) {
+                            sendErrorResponse(channel, t);
+                        }
+                    });
+                }
             }
                 break;
             case POST: {
+                if (content == null) {
+                    throw new InvalidRequestException("content is empty.");
+                }
                 String path = request.param(ConfigSyncService.PATH);
                 byte[] contentArray;
                 if (path != null) {
@@ -109,7 +120,7 @@ public class RestConfigSyncFileAction extends BaseRestHandler {
                 break;
             case DELETE: {
                 String path = request.param(ConfigSyncService.PATH);
-                if (path == null) {
+                if (path == null && content != null && content.length() > 0) {
                     final Map<String, Object> sourceAsMap = SourceLookup.sourceAsMap(content);
                     path = (String) sourceAsMap.get(ConfigSyncService.PATH);
                 }
