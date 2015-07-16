@@ -1,0 +1,22 @@
+{
+  "file": {
+    "_source": {
+      "enabled": true
+    },
+    "_all": {
+      "enabled": false
+    },
+    "properties": {
+      "path": {
+        "type": "string",
+        "index": "not_analyzed"
+      },
+      "content": {
+        "type": "binary"
+      },
+      "@timestamp": {
+        "type": "date"
+      }
+    }
+  }
+}
