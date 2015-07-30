@@ -5,9 +5,11 @@ import static org.elasticsearch.rest.RestStatus.OK;
 import java.io.IOException;
 import java.util.Map;
 
+import org.codelibs.elasticsearch.configsync.action.ConfigResetSyncResponse;
 import org.codelibs.elasticsearch.configsync.exception.IORuntimeException;
 import org.codelibs.elasticsearch.configsync.exception.InvalidRequestException;
 import org.codelibs.elasticsearch.configsync.service.ConfigSyncService;
+import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
@@ -19,17 +21,17 @@ import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 
-public class RestConfigSyncRestartAction extends BaseRestHandler {
+public class RestConfigSyncResetAction extends BaseRestHandler {
 
     private final ConfigSyncService configSyncService;
 
     @Inject
-    public RestConfigSyncRestartAction(final Settings settings, final Client client, final RestController controller,
+    public RestConfigSyncResetAction(final Settings settings, final Client client, final RestController controller,
             final ConfigSyncService configSyncService) {
         super(settings, controller, client);
         this.configSyncService = configSyncService;
 
-        controller.registerHandler(RestRequest.Method.POST, "/_configsync/restart", this);
+        controller.registerHandler(RestRequest.Method.POST, "/_configsync/reset", this);
     }
 
     @Override
@@ -37,8 +39,18 @@ public class RestConfigSyncRestartAction extends BaseRestHandler {
         try {
             switch (request.method()) {
             case POST: {
-                configSyncService.restartUpdater();
-                sendResponse(channel, null);
+                configSyncService.resetSync(new ActionListener<ConfigResetSyncResponse>() {
+
+                    @Override
+                    public void onResponse(final ConfigResetSyncResponse response) {
+                        sendResponse(channel, null);
+                    }
+
+                    @Override
+                    public void onFailure(final Throwable e) {
+                        sendErrorResponse(channel, e);
+                    }
+                });
             }
                 break;
             default:

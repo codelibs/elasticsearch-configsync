@@ -59,14 +59,14 @@ public class RestConfigSyncFileAction extends BaseRestHandler {
                             new ActionListener<List<String>>() {
 
                                 @Override
-                                public void onResponse(List<String> response) {
+                                public void onResponse(final List<String> response) {
                                     final Map<String, Object> params = new HashMap<>();
                                     params.put("path", response);
                                     sendResponse(channel, params);
                                 }
 
                                 @Override
-                                public void onFailure(Throwable t) {
+                                public void onFailure(final Throwable t) {
                                     sendErrorResponse(channel, t);
                                 }
                             });

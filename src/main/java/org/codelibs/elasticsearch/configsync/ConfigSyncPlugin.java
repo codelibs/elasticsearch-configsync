@@ -4,8 +4,10 @@ import java.util.Collection;
 
 import org.codelibs.elasticsearch.configsync.module.ConfigSyncModule;
 import org.codelibs.elasticsearch.configsync.rest.RestConfigSyncFileAction;
-import org.codelibs.elasticsearch.configsync.rest.RestConfigSyncRestartAction;
+import org.codelibs.elasticsearch.configsync.rest.RestConfigSyncFlushAction;
+import org.codelibs.elasticsearch.configsync.rest.RestConfigSyncResetAction;
 import org.codelibs.elasticsearch.configsync.service.ConfigSyncService;
+import org.elasticsearch.cluster.settings.ClusterDynamicSettingsModule;
 import org.elasticsearch.common.collect.Lists;
 import org.elasticsearch.common.component.LifecycleComponent;
 import org.elasticsearch.common.inject.Module;
@@ -26,7 +28,12 @@ public class ConfigSyncPlugin extends AbstractPlugin {
     // for Rest API
     public void onModule(final RestModule module) {
         module.addRestAction(RestConfigSyncFileAction.class);
-        module.addRestAction(RestConfigSyncRestartAction.class);
+        module.addRestAction(RestConfigSyncResetAction.class);
+        module.addRestAction(RestConfigSyncFlushAction.class);
+    }
+
+    public void onModule(final ClusterDynamicSettingsModule module) {
+        module.addDynamicSettings("configsync.flush_interval");
     }
 
     // for Service
