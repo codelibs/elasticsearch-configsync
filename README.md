@@ -8,9 +8,10 @@ These files are managed in .configsync index, and each node sync up with them.
 
 ## Version
 
-| Version   | Elasticsearch |
-|:---------:|:-------------:|
-| master    | 1.6.X         |
+| Version   | Tested on Elasticsearch |
+|:---------:|:-----------------------:|
+| master    | 1.7.X                   |
+| 1.7.0     | 1.7.2                   |
 
 ### Issues/Questions
 
@@ -23,7 +24,7 @@ Please file an [issue](https://github.com/codelibs/elasticsearch-configsync/issu
 
 Not released yet...
 
-    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-configsync/1.6.0
+    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-configsync/1.7.0
 
 ## Getting Started
 
