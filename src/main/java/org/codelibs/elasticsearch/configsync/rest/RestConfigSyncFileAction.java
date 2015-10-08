@@ -27,6 +27,7 @@ import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.search.lookup.SourceLookup;
+import org.elasticsearch.search.sort.SortOrder;
 
 public class RestConfigSyncFileAction extends BaseRestHandler {
 
@@ -55,13 +56,25 @@ public class RestConfigSyncFileAction extends BaseRestHandler {
                     path = (String) sourceAsMap.get(ConfigSyncService.PATH);
                 }
                 if (path == null) {
-                    configSyncService.getPaths(request.paramAsInt("from", 0), request.paramAsInt("size", 10),
-                            new ActionListener<List<String>>() {
+                    final String[] sortValues = request.param("sort", ConfigSyncService.PATH).split(":");
+                    final String sortField;
+                    final String sortOrder;
+                    if (sortValues.length > 1) {
+                        sortField = sortValues[0];
+                        sortOrder = sortValues[1];
+                    } else {
+                        sortField = sortValues[0];
+                        sortOrder = SortOrder.ASC.toString();
+                    }
+
+                    final String[] fields = request.paramAsStringArrayOrEmptyIfAll("fields");
+                    configSyncService.getPaths(request.paramAsInt("from", 0), request.paramAsInt("size", 10), fields, sortField, sortOrder,
+                            new ActionListener<List<Object>>() {
 
                                 @Override
-                                public void onResponse(final List<String> response) {
+                                public void onResponse(final List<Object> response) {
                                     final Map<String, Object> params = new HashMap<>();
-                                    params.put("path", response);
+                                    params.put(fields.length == 0 ? "path" : "file", response);
                                     sendResponse(channel, params);
                                 }
 

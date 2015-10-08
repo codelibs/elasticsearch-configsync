@@ -9,6 +9,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledFuture;
@@ -233,17 +234,28 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
         }
     }
 
-    public void getPaths(final int from, final int size, final ActionListener<List<String>> listener) {
-        client.prepareSearch(index).setTypes(type).setSize(size).setFrom(from).addField(PATH).addSort(TIMESTAMP, SortOrder.ASC)
+    public void getPaths(final int from, final int size, final String[] fields, final String sortField, final String sortOrder,
+            final ActionListener<List<Object>> listener) {
+        final boolean hasFields = !(fields == null || fields.length == 0);
+        client.prepareSearch(index).setTypes(type).setSize(size).setFrom(from).addFields(hasFields ? fields : new String[] { PATH })
+                .addSort(sortField, SortOrder.DESC.toString().equalsIgnoreCase(sortOrder) ? SortOrder.DESC : SortOrder.ASC)
                 .execute(new ActionListener<SearchResponse>() {
 
                     @Override
                     public void onResponse(final SearchResponse response) {
-                        final List<String> pathList = new ArrayList<>();
+                        final List<Object> objList = new ArrayList<>();
                         for (final SearchHit hit : response.getHits().getHits()) {
-                            pathList.add((String) hit.getFields().get(PATH).getValue());
+                            if (hasFields) {
+                                Map<String, Object> objMap = new HashMap<>();
+                                for (final String field : fields) {
+                                    objMap.put(field, hit.getFields().get(field).getValue());
+                                }
+                                objList.add(objMap);
+                            } else {
+                                objList.add(hit.getFields().get(PATH).getValue());
+                            }
                         }
-                        listener.onResponse(pathList);
+                        listener.onResponse(objList);
                     }
 
                     @Override

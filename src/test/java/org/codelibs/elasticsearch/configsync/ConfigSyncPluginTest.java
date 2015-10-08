@@ -142,6 +142,15 @@ public class ConfigSyncPluginTest extends TestCase {
             assertEquals("true", contentMap.get("acknowledged").toString());
             List<String> list = (List<String>) contentMap.get("path");
             assertEquals(2, list.size());
+            assertEquals("dir1/test2.txt", list.get(0).toString());
+            assertEquals("test1.txt", list.get(1).toString());
+        }
+
+        try (CurlResponse response = Curl.get(node, "/_configsync/file").param("sort", "@timestamp").execute()) {
+            Map<String, Object> contentMap = response.getContentAsMap();
+            assertEquals("true", contentMap.get("acknowledged").toString());
+            List<String> list = (List<String>) contentMap.get("path");
+            assertEquals(2, list.size());
             assertEquals("test1.txt", list.get(0).toString());
             assertEquals("dir1/test2.txt", list.get(1).toString());
         }
@@ -170,9 +179,9 @@ public class ConfigSyncPluginTest extends TestCase {
             assertEquals("true", contentMap.get("acknowledged").toString());
             List<String> list = (List<String>) contentMap.get("path");
             assertEquals(3, list.size());
-            assertEquals("test1.txt", list.get(0).toString());
+            assertEquals("dir1/dir2/test3.txt", list.get(0).toString());
             assertEquals("dir1/test2.txt", list.get(1).toString());
-            assertEquals("dir1/dir2/test3.txt", list.get(2).toString());
+            assertEquals("test1.txt", list.get(2).toString());
         }
 
         Thread.sleep(1000L);
@@ -199,8 +208,19 @@ public class ConfigSyncPluginTest extends TestCase {
             assertEquals("true", contentMap.get("acknowledged").toString());
             List<String> list = (List<String>) contentMap.get("path");
             assertEquals(2, list.size());
-            assertEquals("test1.txt", list.get(0).toString());
-            assertEquals("dir1/dir2/test3.txt", list.get(1).toString());
+            assertEquals("dir1/dir2/test3.txt", list.get(0).toString());
+            assertEquals("test1.txt", list.get(1).toString());
+        }
+
+        try (CurlResponse response = Curl.get(node, "/_configsync/file").param("fields", "path,@timestamp").execute()) {
+            Map<String, Object> contentMap = response.getContentAsMap();
+            assertEquals("true", contentMap.get("acknowledged").toString());
+            List<Map<String, Object>> list = (List<Map<String, Object>>) contentMap.get("file");
+            assertEquals(2, list.size());
+            assertEquals("dir1/dir2/test3.txt", list.get(0).get("path"));
+            assertTrue(list.get(0).get("@timestamp").toString().startsWith("20"));
+            assertEquals("test1.txt", list.get(1).get("path"));
+            assertTrue(list.get(1).get("@timestamp").toString().startsWith("20"));
         }
 
         try (CurlResponse response = Curl.delete(node, "/_configsync/file").body("{\"path\":\"test1.txt\"}").execute()) {
@@ -285,7 +305,7 @@ public class ConfigSyncPluginTest extends TestCase {
             assertEquals("true", contentMap.get("acknowledged").toString());
         }
 
-        try (CurlResponse response = Curl.get(node, "/_configsync/file").execute()) {
+        try (CurlResponse response = Curl.get(node, "/_configsync/file").param("sort", "@timestamp").execute()) {
             Map<String, Object> contentMap = response.getContentAsMap();
             assertEquals("true", contentMap.get("acknowledged").toString());
             List<String> list = (List<String>) contentMap.get("path");
@@ -316,7 +336,7 @@ public class ConfigSyncPluginTest extends TestCase {
             assertEquals("true", contentMap.get("acknowledged").toString());
         }
 
-        try (CurlResponse response = Curl.get(node, "/_configsync/file").execute()) {
+        try (CurlResponse response = Curl.get(node, "/_configsync/file").param("sort", "@timestamp").execute()) {
             Map<String, Object> contentMap = response.getContentAsMap();
             assertEquals("true", contentMap.get("acknowledged").toString());
             List<String> list = (List<String>) contentMap.get("path");
@@ -342,13 +362,14 @@ public class ConfigSyncPluginTest extends TestCase {
             assertEquals("Test3", new String(getText(configFiles[base + 2])));
         }
 
-        try (CurlResponse response = Curl.delete(node, "/_configsync/file").param("path", "dir1/test2.txt").execute()) {
+        try (CurlResponse response =
+                Curl.delete(node, "/_configsync/file").param("path", "dir1/test2.txt").param("sort", "@timestamp").execute()) {
             Map<String, Object> contentMap = response.getContentAsMap();
             assertEquals("true", contentMap.get("acknowledged").toString());
             assertEquals("true", contentMap.get("found").toString());
         }
 
-        try (CurlResponse response = Curl.get(node, "/_configsync/file").execute()) {
+        try (CurlResponse response = Curl.get(node, "/_configsync/file").param("sort", "@timestamp").execute()) {
             Map<String, Object> contentMap = response.getContentAsMap();
             assertEquals("true", contentMap.get("acknowledged").toString());
             List<String> list = (List<String>) contentMap.get("path");
