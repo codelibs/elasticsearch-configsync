@@ -2,6 +2,7 @@ package org.codelibs.elasticsearch.configsync.service;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -35,8 +36,6 @@ import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.cluster.node.DiscoveryNodes;
 import org.elasticsearch.common.Base64;
-import org.elasticsearch.common.base.Charsets;
-import org.elasticsearch.common.collect.UnmodifiableIterator;
 import org.elasticsearch.common.component.AbstractLifecycleComponent;
 import org.elasticsearch.common.component.LifecycleListener;
 import org.elasticsearch.common.inject.Inject;
@@ -48,21 +47,23 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.env.Environment;
-import org.elasticsearch.index.query.FilterBuilders;
+import org.elasticsearch.index.IndexNotFoundException;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.indices.IndexMissingException;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.sort.SortOrder;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.threadpool.ThreadPool.Names;
-import org.elasticsearch.transport.BaseTransportRequestHandler;
 import org.elasticsearch.transport.TransportChannel;
 import org.elasticsearch.transport.TransportException;
 import org.elasticsearch.transport.TransportRequest;
+import org.elasticsearch.transport.TransportRequestHandler;
 import org.elasticsearch.transport.TransportResponseHandler;
 import org.elasticsearch.transport.TransportService;
+
+import com.google.common.base.Charsets;
+import com.google.common.collect.UnmodifiableIterator;
 
 public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncService> {
 
@@ -115,12 +116,12 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
 
         index = settings.get("configsync.index", ".configsync");
         type = settings.get("configsync.type", "file");
-        configPath = settings.get("configsync.config_path", env.configFile().getAbsolutePath());
+        configPath = settings.get("configsync.config_path", env.configFile().toFile().getAbsolutePath());
         scrollForUpdate = settings.get("configsync.scroll_time", "1m");
         sizeForUpdate = settings.getAsInt("configsync.scroll_size", 1);
 
-        transportService.registerHandler(ACTION_CONFIG_FLUSH, new ConfigFileFlushRequestHandler());
-        transportService.registerHandler(ACTION_CONFIG_RESET, new ConfigSyncResetRequestHandler());
+        transportService.registerRequestHandler(ACTION_CONFIG_FLUSH,FileFlushRequest.class,ThreadPool.Names.GENERIC, new ConfigFileFlushRequestHandler());
+        transportService.registerRequestHandler(ACTION_CONFIG_RESET,ResetSyncRequest.class,ThreadPool.Names.GENERIC, new ConfigSyncResetRequestHandler());
     }
 
     private void startUpdater() {
@@ -183,7 +184,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
 
             @Override
             public void onFailure(final Throwable e) {
-                if (e instanceof IndexMissingException) {
+                if (e instanceof IndexNotFoundException) {
                     createIndex();
                 } else {
                     logger.error("Failed to start ConfigSyncService.", e);
@@ -194,7 +195,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
 
     private void createIndex() {
         try {
-            final String source = Streams.copyToStringFromClasspath(Thread.currentThread().getContextClassLoader(), FILE_MAPPING_JSON);
+            final String source = Streams.copyToString(new InputStreamReader(Thread.currentThread().getContextClassLoader().getResourceAsStream(FILE_MAPPING_JSON), Charsets.UTF_8));
             client.admin().indices().prepareCreate(index).addMapping(type, source).execute(new ActionListener<CreateIndexResponse>() {
                 @Override
                 public void onResponse(final CreateIndexResponse response) {
@@ -396,7 +397,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
                     logger.warn("Failed to create " + parentFile.getAbsolutePath());
                 }
                 final String absolutePath = filePath.toFile().getAbsolutePath();
-                Base64.decodeToFile(content, absolutePath);
+                decodeToFile(content, absolutePath);
                 logger.info("Updated " + absolutePath);
             }
         } catch (final Exception e) {
@@ -464,8 +465,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
             this.listener = listener;
 
             final Date now = new Date();
-            final QueryBuilder queryBuilder =
-                    QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), FilterBuilders.rangeFilter(TIMESTAMP).from(lastChecked));
+            final QueryBuilder queryBuilder =QueryBuilders.boolQuery().filter(QueryBuilders.rangeQuery(TIMESTAMP).from(lastChecked));
             lastChecked = now;
             initialized.set(false);
             client.prepareSearch(index).setTypes(type).setSearchType(SearchType.SCAN).setQuery(queryBuilder).setScroll(scrollForUpdate)
@@ -510,12 +510,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
         }
     }
 
-    class ConfigFileFlushRequestHandler extends BaseTransportRequestHandler<FileFlushRequest> {
-
-        @Override
-        public FileFlushRequest newInstance() {
-            return new FileFlushRequest();
-        }
+    class ConfigFileFlushRequestHandler implements TransportRequestHandler<FileFlushRequest> {
 
         @Override
         public void messageReceived(final FileFlushRequest request, final TransportChannel channel) throws Exception {
@@ -541,12 +536,6 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
                 }
             });
         }
-
-        @Override
-        public String executor() {
-            return ThreadPool.Names.GENERIC;
-        }
-
     }
 
     private static class FileFlushRequest extends TransportRequest {
@@ -587,24 +576,13 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
         }
     }
 
-    class ConfigSyncResetRequestHandler extends BaseTransportRequestHandler<ResetSyncRequest> {
-
-        @Override
-        public ResetSyncRequest newInstance() {
-            return new ResetSyncRequest();
-        }
+    class ConfigSyncResetRequestHandler implements TransportRequestHandler<ResetSyncRequest> {
 
         @Override
         public void messageReceived(final ResetSyncRequest request, final TransportChannel channel) throws Exception {
             restartUpdater();
             channel.sendResponse(new ResetSyncResponse(true));
         }
-
-        @Override
-        public String executor() {
-            return ThreadPool.Names.GENERIC;
-        }
-
     }
 
     private static class ResetSyncRequest extends TransportRequest {
@@ -644,4 +622,25 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
             writeAcknowledged(out);
         }
     }
+
+    private static void decodeToFile(String dataToDecode, String filename)
+            throws java.io.IOException {
+
+        Base64.OutputStream bos = null;
+        try {
+            bos = new Base64.OutputStream(
+                    new java.io.FileOutputStream(filename), Base64.DECODE);
+            bos.write(dataToDecode.getBytes(Base64.PREFERRED_ENCODING));
+        }   // end try
+        catch (java.io.IOException e) {
+            throw e; // Catch and throw to execute finally{} block
+        }   // end catch: java.io.IOException
+        finally {
+            try {
+                bos.close();
+            } catch (Exception e) {
+            }
+        }   // end finally
+
+    }   // end decodeToFile
 }

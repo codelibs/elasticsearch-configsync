@@ -7,22 +7,24 @@ import org.codelibs.elasticsearch.configsync.rest.RestConfigSyncFileAction;
 import org.codelibs.elasticsearch.configsync.rest.RestConfigSyncFlushAction;
 import org.codelibs.elasticsearch.configsync.rest.RestConfigSyncResetAction;
 import org.codelibs.elasticsearch.configsync.service.ConfigSyncService;
-import org.elasticsearch.cluster.settings.ClusterDynamicSettingsModule;
-import org.elasticsearch.common.collect.Lists;
+import org.elasticsearch.cluster.ClusterModule;
+import org.elasticsearch.cluster.settings.Validator;
 import org.elasticsearch.common.component.LifecycleComponent;
 import org.elasticsearch.common.inject.Module;
-import org.elasticsearch.plugins.AbstractPlugin;
+import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.rest.RestModule;
 
-public class ConfigSyncPlugin extends AbstractPlugin {
+import com.google.common.collect.Lists;
+
+public class ConfigSyncPlugin extends Plugin {
     @Override
     public String name() {
-        return "ConfigSyncPlugin";
+        return "configsync";
     }
 
     @Override
     public String description() {
-        return "This is a elasticsearch-configsync plugin.";
+        return "ConfigSync plugin syncs up with configuration files in .configsync index.";
     }
 
     // for Rest API
@@ -32,22 +34,22 @@ public class ConfigSyncPlugin extends AbstractPlugin {
         module.addRestAction(RestConfigSyncFlushAction.class);
     }
 
-    public void onModule(final ClusterDynamicSettingsModule module) {
-        module.addDynamicSettings("configsync.flush_interval");
+    public void onModule(final ClusterModule module) {
+        module.registerClusterDynamicSetting("configsync.flush_interval", Validator.TIME);
     }
 
     // for Service
     @Override
-    public Collection<Class<? extends Module>> modules() {
-        final Collection<Class<? extends Module>> modules = Lists.newArrayList();
-        modules.add(ConfigSyncModule.class);
+    public Collection<Module> nodeModules() {
+        final Collection<Module> modules = Lists.newArrayList();
+        modules.add(new ConfigSyncModule());
         return modules;
     }
 
     // for Service
     @SuppressWarnings("rawtypes")
     @Override
-    public Collection<Class<? extends LifecycleComponent>> services() {
+    public Collection<Class<? extends LifecycleComponent>> nodeServices() {
         final Collection<Class<? extends LifecycleComponent>> services = Lists.newArrayList();
         services.add(ConfigSyncService.class);
         return services;

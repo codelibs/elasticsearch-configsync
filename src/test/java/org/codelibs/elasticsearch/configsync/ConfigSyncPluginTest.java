@@ -15,11 +15,11 @@ import org.codelibs.elasticsearch.runner.net.Curl;
 import org.codelibs.elasticsearch.runner.net.CurlResponse;
 import org.elasticsearch.action.admin.cluster.settings.ClusterUpdateSettingsResponse;
 import org.elasticsearch.common.Base64;
-import org.elasticsearch.common.base.Charsets;
-import org.elasticsearch.common.settings.ImmutableSettings;
-import org.elasticsearch.common.settings.ImmutableSettings.Builder;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.settings.Settings.Builder;
 import org.elasticsearch.node.Node;
+
+import com.google.common.base.Charsets;
 
 import junit.framework.TestCase;
 
@@ -31,8 +31,11 @@ public class ConfigSyncPluginTest extends TestCase {
 
     private File[] configFiles;
 
+    private String clusterName;
+
     @Override
     protected void setUp() throws Exception {
+        clusterName = "es-configsync-" + System.currentTimeMillis();
         // create runner instance
         runner = new ElasticsearchClusterRunner();
         // create ES nodes
@@ -40,9 +43,14 @@ public class ConfigSyncPluginTest extends TestCase {
             @Override
             public void build(final int number, final Builder settingsBuilder) {
                 settingsBuilder.put("http.cors.enabled", true);
+                settingsBuilder.put("index.number_of_replicas", 0);
+                settingsBuilder.put("index.number_of_shards", 3);
+                settingsBuilder.put("http.cors.allow-origin", "*");
+                settingsBuilder.putArray("discovery.zen.ping.unicast.hosts", "localhost:9301-9399");
+                settingsBuilder.put("plugin.types", "org.codelibs.elasticsearch.configsync.ConfigSyncPlugin");
                 settingsBuilder.put("configsync.flush_interval", "1m");
             }
-        }).build(newConfigs().clusterName("es-configsync-" + System.currentTimeMillis()).ramIndexStore().numOfNode(numOfNode));
+        }).build(newConfigs().clusterName(clusterName).numOfNode(numOfNode));
 
         // wait for yellow status
         runner.ensureYellow();
@@ -78,7 +86,7 @@ public class ConfigSyncPluginTest extends TestCase {
         Node node = runner.node();
 
         {
-            Settings settings = ImmutableSettings.settingsBuilder().put("configsync.flush_interval", "1s").build();
+            Settings settings = Settings.settingsBuilder().put("configsync.flush_interval", "1s").build();
             ClusterUpdateSettingsResponse response =
                     node.client().admin().cluster().prepareUpdateSettings().setPersistentSettings(settings).execute().actionGet();
             assertTrue(response.isAcknowledged());
