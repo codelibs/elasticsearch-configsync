@@ -195,7 +195,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
 
     private void createIndex() {
         try {
-            final String source = Streams.copyToString(new InputStreamReader(Thread.currentThread().getContextClassLoader().getResourceAsStream(FILE_MAPPING_JSON), Charsets.UTF_8));
+            final String source = Streams.copyToString(new InputStreamReader(ConfigSyncService.class.getClassLoader().getResourceAsStream(FILE_MAPPING_JSON), Charsets.UTF_8));
             client.admin().indices().prepareCreate(index).addMapping(type, source).execute(new ActionListener<CreateIndexResponse>() {
                 @Override
                 public void onResponse(final CreateIndexResponse response) {
