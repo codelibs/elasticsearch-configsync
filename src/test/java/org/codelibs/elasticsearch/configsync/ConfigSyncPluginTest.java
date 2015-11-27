@@ -46,7 +46,7 @@ public class ConfigSyncPluginTest extends TestCase {
                 settingsBuilder.put("index.number_of_replicas", 0);
                 settingsBuilder.put("index.number_of_shards", 3);
                 settingsBuilder.put("http.cors.allow-origin", "*");
-                settingsBuilder.putArray("discovery.zen.ping.unicast.hosts", "localhost:9301-9399");
+                settingsBuilder.putArray("discovery.zen.ping.unicast.hosts", "localhost:9301-9310");
                 settingsBuilder.put("plugin.types", "org.codelibs.elasticsearch.configsync.ConfigSyncPlugin");
                 settingsBuilder.put("configsync.flush_interval", "1m");
             }
