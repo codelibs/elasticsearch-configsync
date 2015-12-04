@@ -23,9 +23,7 @@ Please file an [issue](https://github.com/codelibs/elasticsearch-configsync/issu
 
 ### Install Config Sync Plugin
 
-Not released yet...
-
-    $ $ES_HOME/bin/plugin --install org.codelibs/elasticsearch-configsync/2.0.0
+    $ $ES_HOME/bin/plugin install org.codelibs/elasticsearch-configsync/2.0.0
 
 ## Getting Started
 
