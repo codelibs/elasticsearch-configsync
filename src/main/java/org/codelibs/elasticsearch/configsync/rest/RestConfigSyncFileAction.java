@@ -3,6 +3,7 @@ package org.codelibs.elasticsearch.configsync.rest;
 import static org.elasticsearch.rest.RestStatus.NOT_FOUND;
 import static org.elasticsearch.rest.RestStatus.OK;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -110,7 +111,10 @@ public class RestConfigSyncFileAction extends BaseRestHandler {
                 String path = request.param(ConfigSyncService.PATH);
                 byte[] contentArray;
                 if (path != null) {
-                    contentArray = content.array();
+                    try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+                        content.writeTo(out);
+                        contentArray = out.toByteArray();
+                    }
                 } else {
                     final Map<String, Object> sourceAsMap = SourceLookup.sourceAsMap(content);
                     path = (String) sourceAsMap.get(ConfigSyncService.PATH);
