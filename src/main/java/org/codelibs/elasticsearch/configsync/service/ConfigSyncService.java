@@ -538,9 +538,9 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
         }
     }
 
-    private static class FileFlushRequest extends TransportRequest {
+    public static class FileFlushRequest extends TransportRequest {
 
-        FileFlushRequest() {
+        public FileFlushRequest() {
         }
 
         @Override
@@ -585,9 +585,9 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
         }
     }
 
-    private static class ResetSyncRequest extends TransportRequest {
+    public static class ResetSyncRequest extends TransportRequest {
 
-        ResetSyncRequest() {
+        public ResetSyncRequest() {
         }
 
         @Override
