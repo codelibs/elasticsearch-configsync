@@ -18,7 +18,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.codelibs.elasticsearch.configsync.action.ConfigFileFlushResponse;
 import org.codelibs.elasticsearch.configsync.action.ConfigResetSyncResponse;
-import org.codelibs.elasticsearch.configsync.exception.IORuntimeException;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
@@ -28,7 +27,6 @@ import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.ClusterService;
@@ -208,7 +206,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
                 }
             });
         } catch (final IOException e) {
-            throw new IORuntimeException("Failed to access " + FILE_MAPPING_JSON, e);
+            throw new ElasticsearchException("Failed to access " + FILE_MAPPING_JSON, e);
         }
     }
 
@@ -231,7 +229,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
             builder.field(TIMESTAMP, new Date());
             client.prepareIndex(index, type, id).setSource(builder).setRefresh(true).execute(listener);
         } catch (final IOException e) {
-            throw new IORuntimeException("Failed to register " + path, e);
+            throw new ElasticsearchException("Failed to register " + path, e);
         }
     }
 
@@ -364,7 +362,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
                         final byte[] configContent = Base64.decode((String) response.getSource().get(ConfigSyncService.CONTENT));
                         listener.onResponse(configContent);
                     } catch (final IOException e) {
-                        throw new IORuntimeException("Failed to access the content.", e);
+                        throw new ElasticsearchException("Failed to access the content.", e);
                     }
                 } else {
                     listener.onResponse(null);
@@ -455,8 +453,6 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
 
     class ConfigFileWriter implements ActionListener<SearchResponse> {
 
-        private final AtomicBoolean initialized = new AtomicBoolean(false);
-
         private final AtomicBoolean terminated = new AtomicBoolean(false);
 
         private ActionListener<Void> listener;
@@ -467,8 +463,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
             final Date now = new Date();
             final QueryBuilder queryBuilder =QueryBuilders.boolQuery().filter(QueryBuilders.rangeQuery(TIMESTAMP).from(lastChecked));
             lastChecked = now;
-            initialized.set(false);
-            client.prepareSearch(index).setTypes(type).setSearchType(SearchType.SCAN).setQuery(queryBuilder).setScroll(scrollForUpdate)
+            client.prepareSearch(index).setTypes(type).setQuery(queryBuilder).setScroll(scrollForUpdate)
                     .setSize(sizeForUpdate).execute(this);
         }
 
@@ -482,12 +477,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
                 if (logger.isDebugEnabled()) {
                     logger.debug("Terminated " + this);
                 }
-                return;
-            }
-
-            final String scrollId = response.getScrollId();
-            if (!initialized.getAndSet(true)) {
-                client.prepareSearchScroll(scrollId).setScroll(scrollForUpdate).execute(this);
+                listener.onFailure(new ElasticsearchException("Config Writing process was terminated."));
                 return;
             }
 
@@ -500,6 +490,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
                     final Map<String, Object> source = hit.getSource();
                     updateConfigFile(source);
                 }
+                final String scrollId = response.getScrollId();
                 client.prepareSearchScroll(scrollId).setScroll(scrollForUpdate).execute(this);
             }
         }
@@ -521,7 +512,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
                     try {
                         channel.sendResponse(new FileFlushResponse(true));
                     } catch (final IOException e) {
-                        throw new IORuntimeException("Failed to write a response.", e);
+                        throw new ElasticsearchException("Failed to write a response.", e);
                     }
                 }
 
@@ -531,7 +522,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
                     try {
                         channel.sendResponse(e);
                     } catch (final IOException e1) {
-                        throw new IORuntimeException("Failed to write a response.", e1);
+                        throw new ElasticsearchException("Failed to write a response.", e1);
                     }
                 }
             });

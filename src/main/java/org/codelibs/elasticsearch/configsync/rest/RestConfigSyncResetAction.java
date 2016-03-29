@@ -6,9 +6,8 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.codelibs.elasticsearch.configsync.action.ConfigResetSyncResponse;
-import org.codelibs.elasticsearch.configsync.exception.IORuntimeException;
-import org.codelibs.elasticsearch.configsync.exception.InvalidRequestException;
 import org.codelibs.elasticsearch.configsync.service.ConfigSyncService;
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.inject.Inject;
@@ -54,7 +53,7 @@ public class RestConfigSyncResetAction extends BaseRestHandler {
             }
                 break;
             default:
-                sendErrorResponse(channel, new InvalidRequestException("Unknown request type."));
+                sendErrorResponse(channel, new ElasticsearchException("Unknown request type."));
                 break;
             }
         } catch (final Exception e) {
@@ -75,7 +74,7 @@ public class RestConfigSyncResetAction extends BaseRestHandler {
             builder.endObject();
             channel.sendResponse(new BytesRestResponse(OK, builder));
         } catch (final IOException e) {
-            throw new IORuntimeException("Failed to create a resposne.", e);
+            throw new ElasticsearchException("Failed to create a resposne.", e);
         }
     }
 

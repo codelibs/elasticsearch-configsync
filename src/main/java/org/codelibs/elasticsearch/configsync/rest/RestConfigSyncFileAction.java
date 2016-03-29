@@ -9,9 +9,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.codelibs.elasticsearch.configsync.exception.IORuntimeException;
-import org.codelibs.elasticsearch.configsync.exception.InvalidRequestException;
 import org.codelibs.elasticsearch.configsync.service.ConfigSyncService;
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.index.IndexResponse;
@@ -106,7 +105,7 @@ public class RestConfigSyncFileAction extends BaseRestHandler {
                 break;
             case POST: {
                 if (content == null) {
-                    throw new InvalidRequestException("content is empty.");
+                    throw new ElasticsearchException("content is empty.");
                 }
                 String path = request.param(ConfigSyncService.PATH);
                 byte[] contentArray;
@@ -142,7 +141,7 @@ public class RestConfigSyncFileAction extends BaseRestHandler {
                     path = (String) sourceAsMap.get(ConfigSyncService.PATH);
                 }
                 if (path == null) {
-                    sendErrorResponse(channel, new InvalidRequestException(ConfigSyncService.PATH + " is empty."));
+                    sendErrorResponse(channel, new ElasticsearchException(ConfigSyncService.PATH + " is empty."));
                     return;
                 }
                 configSyncService.delete(path, new ActionListener<DeleteResponse>() {
@@ -163,7 +162,7 @@ public class RestConfigSyncFileAction extends BaseRestHandler {
                 break;
 
             default:
-                sendErrorResponse(channel, new InvalidRequestException("Unknown request type."));
+                sendErrorResponse(channel, new ElasticsearchException("Unknown request type."));
                 break;
             }
         } catch (final Exception e) {
@@ -184,7 +183,7 @@ public class RestConfigSyncFileAction extends BaseRestHandler {
             builder.endObject();
             channel.sendResponse(new BytesRestResponse(OK, builder));
         } catch (final IOException e) {
-            throw new IORuntimeException("Failed to create a resposne.", e);
+            throw new ElasticsearchException("Failed to create a resposne.", e);
         }
     }
 
