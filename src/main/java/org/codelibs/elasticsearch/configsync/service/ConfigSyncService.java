@@ -118,8 +118,10 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
         scrollForUpdate = settings.get("configsync.scroll_time", "1m");
         sizeForUpdate = settings.getAsInt("configsync.scroll_size", 1);
 
-        transportService.registerRequestHandler(ACTION_CONFIG_FLUSH,FileFlushRequest.class,ThreadPool.Names.GENERIC, new ConfigFileFlushRequestHandler());
-        transportService.registerRequestHandler(ACTION_CONFIG_RESET,ResetSyncRequest.class,ThreadPool.Names.GENERIC, new ConfigSyncResetRequestHandler());
+        transportService.registerRequestHandler(ACTION_CONFIG_FLUSH, FileFlushRequest.class, ThreadPool.Names.GENERIC,
+                new ConfigFileFlushRequestHandler());
+        transportService.registerRequestHandler(ACTION_CONFIG_RESET, ResetSyncRequest.class, ThreadPool.Names.GENERIC,
+                new ConfigSyncResetRequestHandler());
     }
 
     private void startUpdater() {
@@ -501,7 +503,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
         }
     }
 
-    class ConfigFileFlushRequestHandler implements TransportRequestHandler<FileFlushRequest> {
+    class ConfigFileFlushRequestHandler extends TransportRequestHandler<FileFlushRequest> {
 
         @Override
         public void messageReceived(final FileFlushRequest request, final TransportChannel channel) throws Exception {
@@ -567,7 +569,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
         }
     }
 
-    class ConfigSyncResetRequestHandler implements TransportRequestHandler<ResetSyncRequest> {
+    class ConfigSyncResetRequestHandler extends TransportRequestHandler<ResetSyncRequest> {
 
         @Override
         public void messageReceived(final ResetSyncRequest request, final TransportChannel channel) throws Exception {
