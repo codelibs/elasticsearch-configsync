@@ -6,6 +6,8 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -13,6 +15,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -137,7 +140,6 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
         if (logger.isDebugEnabled()) {
             logger.debug("Scheduled ConfigFileUpdater with " + flushInterval);
         }
-        logger.info("Scheduled ConfigFileUpdater with " + flushInterval);
     }
 
     @Override
@@ -390,15 +392,34 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
             if (logger.isDebugEnabled()) {
                 logger.debug("Checking " + filePath);
             }
-            if (!Files.exists(filePath) || Files.getLastModifiedTime(filePath).toMillis() < timestamp.getTime()) {
-                final String content = (String) source.get(CONTENT);
-                final File parentFile = filePath.toFile().getParentFile();
-                if (!parentFile.exists() && !parentFile.mkdirs()) {
-                    logger.warn("Failed to create " + parentFile.getAbsolutePath());
+            final Exception e = AccessController.doPrivileged(new PrivilegedAction<Exception>() {
+                @Override
+                public Exception run() {
+                    try {
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("timestamp(index): {}", timestamp.getTime());
+                            if (Files.exists(filePath)) {
+                                logger.debug("timestamp(file):  {}", Files.getLastModifiedTime(filePath).toMillis());
+                            }
+                        }
+                        if (!Files.exists(filePath) || Files.getLastModifiedTime(filePath).toMillis() < timestamp.getTime()) {
+                            final String content = (String) source.get(CONTENT);
+                            final File parentFile = filePath.toFile().getParentFile();
+                            if (!parentFile.exists() && !parentFile.mkdirs()) {
+                                logger.warn("Failed to create " + parentFile.getAbsolutePath());
+                            }
+                            final String absolutePath = filePath.toFile().getAbsolutePath();
+                            decodeToFile(content, absolutePath);
+                            logger.info("Updated " + absolutePath);
+                        }
+                    } catch (final Exception e) {
+                        return e;
+                    }
+                    return null;
                 }
-                final String absolutePath = filePath.toFile().getAbsolutePath();
-                decodeToFile(content, absolutePath);
-                logger.info("Updated " + absolutePath);
+            });
+            if (e != null) {
+                throw e;
             }
         } catch (final Exception e) {
             logger.warn("Failed to update " + source.get(PATH), e);
@@ -412,6 +433,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
             return new Date(((Number) value).longValue());
         } else {
             final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+            sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
             return sdf.parse(value.toString());
         }
     }
