@@ -136,9 +136,15 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
 
         final TimeValue flushInterval =
                 clusterService.state().getMetaData().settings().getAsTime("configsync.flush_interval", TimeValue.timeValueMinutes(1));
-        scheduledFuture = threadPool.schedule(flushInterval, Names.SAME, configFileUpdater);
-        if (logger.isDebugEnabled()) {
-            logger.debug("Scheduled ConfigFileUpdater with " + flushInterval);
+        if (flushInterval.millis() < 0) {
+            if(logger.isDebugEnabled()){
+                logger.debug("ConfigFileUpdater is not scheduled.");
+            }
+        } else {
+            scheduledFuture = threadPool.schedule(flushInterval, Names.SAME, configFileUpdater);
+            if (logger.isDebugEnabled()) {
+                logger.debug("Scheduled ConfigFileUpdater with " + flushInterval);
+            }
         }
     }
 
