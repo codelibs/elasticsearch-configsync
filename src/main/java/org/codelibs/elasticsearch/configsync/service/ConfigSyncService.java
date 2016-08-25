@@ -657,9 +657,10 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
             throw e; // Catch and throw to execute finally{} block
         }   // end catch: java.io.IOException
         finally {
-            try {
-                bos.close();
-            } catch (Exception e) {
+            if (bos != null) {
+                try {
+                    bos.close();
+                } catch (Exception e) {}
             }
         }   // end finally
 
