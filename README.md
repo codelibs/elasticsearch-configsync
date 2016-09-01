@@ -10,7 +10,8 @@ These files are managed in .configsync index, and each node sync up with them.
 
 | Version   | Tested on Elasticsearch |
 |:---------:|:-----------------------:|
-| master    | 2.3.X                   |
+| master    | 2.4.X                   |
+| 2.4.0     | 2.4.0                   |
 | 2.3.2     | 2.3.5                   |
 | 2.2.0     | 2.2.2                   |
 | 2.1.1     | 2.1.1                   |
@@ -26,7 +27,7 @@ Please file an [issue](https://github.com/codelibs/elasticsearch-configsync/issu
 
 ### Install Config Sync Plugin
 
-    $ $ES_HOME/bin/plugin install org.codelibs/elasticsearch-configsync/2.3.2
+    $ $ES_HOME/bin/plugin install org.codelibs/elasticsearch-configsync/2.4.0
 
 ## Getting Started
 
