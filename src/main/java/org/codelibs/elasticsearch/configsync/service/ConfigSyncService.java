@@ -3,6 +3,7 @@ package org.codelibs.elasticsearch.configsync.service;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -155,15 +156,14 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
         clusterService.addLifecycleListener(new LifecycleListener() {
             @Override
             public void afterStart() {
-                client.admin().cluster().prepareHealth().setWaitForYellowStatus().execute(new ActionListener<ClusterHealthResponse>() {
+                client.admin().cluster().prepareHealth().setWaitForGreenStatus().execute(new ActionListener<ClusterHealthResponse>() {
 
                     @Override
                     public void onResponse(final ClusterHealthResponse response) {
                         if (response.isTimedOut()) {
-                            logger.error("Failed to start ConfigSyncService. Elasticsearch was timeouted.");
-                        } else {
-                            checkIfIndexExists();
+                            logger.warn("Cluster service was timeouted.");
                         }
+                        checkIfIndexExists();
                     }
 
                     @Override
@@ -202,8 +202,9 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
     }
 
     private void createIndex() {
-        try {
-            final String source = Streams.copyToString(new InputStreamReader(ConfigSyncService.class.getClassLoader().getResourceAsStream(FILE_MAPPING_JSON), Charsets.UTF_8));
+        try (final Reader in =
+                new InputStreamReader(ConfigSyncService.class.getClassLoader().getResourceAsStream(FILE_MAPPING_JSON), Charsets.UTF_8)) {
+            final String source = Streams.copyToString(in);
             client.admin().indices().prepareCreate(index).addMapping(type, source).execute(new ActionListener<CreateIndexResponse>() {
                 @Override
                 public void onResponse(final CreateIndexResponse response) {
