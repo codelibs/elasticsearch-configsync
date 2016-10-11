@@ -33,7 +33,7 @@ Please file an [issue](https://github.com/codelibs/elasticsearch-configsync/issu
 
 ### Register File
 
-    $ curl -XPOST localhost:9200/_configsync/file?path=user-dict.txt -d @user-dict.txt
+    $ curl -XPOST localhost:9200/_configsync/file?path=user-dict.txt --data-binary @user-dict.txt
 
 The above request is to add file info to .configsync index.
 path parameter is a synced file location under $ES_CONF directory(ex. /etc/elasticsearch/user-dict.txt).
