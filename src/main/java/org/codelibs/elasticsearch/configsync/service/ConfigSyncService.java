@@ -24,6 +24,7 @@ import org.codelibs.elasticsearch.configsync.action.ConfigFileFlushResponse;
 import org.codelibs.elasticsearch.configsync.action.ConfigResetSyncResponse;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
@@ -105,6 +106,10 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
 
     private volatile ScheduledFuture<?> scheduledFuture;
 
+    private boolean fileUpdaterEnabled;
+
+    private TimeValue flushInterval;
+
     @Inject
     public ConfigSyncService(final Settings settings, final Client client, final ClusterService clusterService,
             final TransportService transportService, final Environment env, final ThreadPool threadPool) {
@@ -114,13 +119,17 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
         this.transportService = transportService;
         this.threadPool = threadPool;
 
-        logger.info("Creating ConfigSyncService");
+        if (logger.isDebugEnabled()) {
+            logger.debug("Creating ConfigSyncService");
+        }
 
         index = settings.get("configsync.index", ".configsync");
         type = settings.get("configsync.type", "file");
         configPath = settings.get("configsync.config_path", env.configFile().toFile().getAbsolutePath());
         scrollForUpdate = settings.get("configsync.scroll_time", "1m");
         sizeForUpdate = settings.getAsInt("configsync.scroll_size", 1);
+        flushInterval = settings.getAsTime("configsync.flush_interval", TimeValue.timeValueMinutes(1));
+        fileUpdaterEnabled = settings.getAsBoolean("configsync.file_updater.enabled", true);
 
         transportService.registerRequestHandler(ACTION_CONFIG_FLUSH, FileFlushRequest.class, ThreadPool.Names.GENERIC,
                 new ConfigFileFlushRequestHandler());
@@ -128,97 +137,127 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
                 new ConfigSyncResetRequestHandler());
     }
 
-    private void startUpdater() {
+    private TimeValue startUpdater() {
         configFileUpdater = new ConfigFileUpdater();
 
         if (scheduledFuture != null) {
             scheduledFuture.cancel(true);
         }
 
-        final TimeValue flushInterval =
-                clusterService.state().getMetaData().settings().getAsTime("configsync.flush_interval", TimeValue.timeValueMinutes(1));
-        if (flushInterval.millis() < 0) {
-            if(logger.isDebugEnabled()){
+        final TimeValue interval = clusterService.state().getMetaData().settings().getAsTime("configsync.flush_interval", flushInterval);
+        if (interval.millis() < 0) {
+            if (logger.isDebugEnabled()) {
                 logger.debug("ConfigFileUpdater is not scheduled.");
             }
         } else {
-            scheduledFuture = threadPool.schedule(flushInterval, Names.SAME, configFileUpdater);
+            scheduledFuture = threadPool.schedule(interval, Names.SAME, configFileUpdater);
             if (logger.isDebugEnabled()) {
-                logger.debug("Scheduled ConfigFileUpdater with " + flushInterval);
+                logger.debug("Scheduled ConfigFileUpdater with " + interval);
             }
         }
+        return interval;
     }
 
     @Override
     protected void doStart() throws ElasticsearchException {
-        logger.info("Starting ConfigSyncService");
+        if (logger.isDebugEnabled()) {
+            logger.debug("Starting ConfigSyncService");
+        }
 
-        clusterService.addLifecycleListener(new LifecycleListener() {
-            @Override
-            public void afterStart() {
-                client.admin().cluster().prepareHealth().setWaitForGreenStatus().execute(new ActionListener<ClusterHealthResponse>() {
+        if (fileUpdaterEnabled) {
+            clusterService.addLifecycleListener(new LifecycleListener() {
+                @Override
+                public void afterStart() {
+                    client.admin().cluster().prepareHealth().setWaitForGreenStatus().execute(new ActionListener<ClusterHealthResponse>() {
 
-                    @Override
-                    public void onResponse(final ClusterHealthResponse response) {
-                        if (response.isTimedOut()) {
-                            logger.warn("Cluster service was timeouted.");
+                        @Override
+                        public void onResponse(final ClusterHealthResponse response) {
+                            if (response.isTimedOut()) {
+                                logger.warn("Cluster service was timeouted.");
+                            }
+                            checkIfIndexExists(new ActionListener<ActionResponse>() {
+                                @Override
+                                public void onResponse(ActionResponse response) {
+                                    final TimeValue time = startUpdater();
+                                    if (time.millis() >= 0) {
+                                        logger.info("ConfigFileUpdater is started at {} intervals.", time);
+                                    }
+                                }
+
+                                @Override
+                                public void onFailure(Throwable e) {
+                                    logger.error("Failed to start ConfigFileUpdater.", e);
+                                }
+                            });
                         }
-                        checkIfIndexExists();
-                    }
 
-                    @Override
-                    public void onFailure(final Throwable e) {
-                        logger.error("Failed to start ConfigSyncService.", e);
-                    }
-                });
-            }
-        });
+                        @Override
+                        public void onFailure(final Throwable e) {
+                            logger.error("Failed to start ConfigFileUpdater.", e);
+                        }
+                    });
+                }
+            });
+        }
     }
 
-    private void checkIfIndexExists() {
+    private void checkIfIndexExists(final ActionListener<ActionResponse> listener) {
         client.admin().indices().prepareExists(index).execute(new ActionListener<IndicesExistsResponse>() {
-
             @Override
             public void onResponse(final IndicesExistsResponse response) {
                 if (response.isExists()) {
                     if (logger.isDebugEnabled()) {
                         logger.debug(index + " exists.");
                     }
-                    startUpdater();
+                    listener.onResponse(response);
                 } else {
-                    createIndex();
+                    createIndex(listener);
                 }
             }
 
             @Override
             public void onFailure(final Throwable e) {
                 if (e instanceof IndexNotFoundException) {
-                    createIndex();
+                    createIndex(listener);
                 } else {
-                    logger.error("Failed to start ConfigSyncService.", e);
+                    listener.onFailure(e);
                 }
             }
         });
     }
 
-    private void createIndex() {
+    private void createIndex(final ActionListener<ActionResponse> listener) {
         try (final Reader in =
                 new InputStreamReader(ConfigSyncService.class.getClassLoader().getResourceAsStream(FILE_MAPPING_JSON), Charsets.UTF_8)) {
             final String source = Streams.copyToString(in);
             client.admin().indices().prepareCreate(index).addMapping(type, source).execute(new ActionListener<CreateIndexResponse>() {
                 @Override
                 public void onResponse(final CreateIndexResponse response) {
-                    startUpdater();
+                    waitForIndex(listener);
                 }
 
                 @Override
                 public void onFailure(final Throwable e) {
-                    logger.error("Failed to start ConfigSyncService.", e);
+                    listener.onFailure(e);
                 }
             });
         } catch (final IOException e) {
-            throw new ElasticsearchException("Failed to access " + FILE_MAPPING_JSON, e);
+            listener.onFailure(e);
         }
+    }
+
+    private void waitForIndex(final ActionListener<ActionResponse> listener) {
+        client.admin().cluster().prepareHealth(index).setWaitForYellowStatus().execute(new ActionListener<ClusterHealthResponse>() {
+            @Override
+            public void onResponse(ClusterHealthResponse response) {
+                listener.onResponse(response);
+            }
+
+            @Override
+            public void onFailure(Throwable e) {
+                listener.onFailure(e);
+            }
+        });
     }
 
     @Override
@@ -231,48 +270,68 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
     }
 
     public void store(final String path, final byte[] contentArray, final ActionListener<IndexResponse> listener) {
-        try {
-            final String id = getId(path);
-            final XContentBuilder builder = JsonXContent.contentBuilder();
-            builder.startObject();
-            builder.field(PATH, path);
-            builder.field(CONTENT, contentArray);
-            builder.field(TIMESTAMP, new Date());
-            client.prepareIndex(index, type, id).setSource(builder).setRefresh(true).execute(listener);
-        } catch (final IOException e) {
-            throw new ElasticsearchException("Failed to register " + path, e);
-        }
+        checkIfIndexExists(new ActionListener<ActionResponse>() {
+            @Override
+            public void onResponse(ActionResponse response) {
+                try {
+                    final String id = getId(path);
+                    final XContentBuilder builder = JsonXContent.contentBuilder();
+                    builder.startObject();
+                    builder.field(PATH, path);
+                    builder.field(CONTENT, contentArray);
+                    builder.field(TIMESTAMP, new Date());
+                    client.prepareIndex(index, type, id).setSource(builder).setRefresh(true).execute(listener);
+                } catch (final IOException e) {
+                    throw new ElasticsearchException("Failed to register " + path, e);
+                }
+            }
+
+            @Override
+            public void onFailure(Throwable e) {
+                listener.onFailure(e);
+            }
+        });
     }
 
     public void getPaths(final int from, final int size, final String[] fields, final String sortField, final String sortOrder,
             final ActionListener<List<Object>> listener) {
-        final boolean hasFields = !(fields == null || fields.length == 0);
-        client.prepareSearch(index).setTypes(type).setSize(size).setFrom(from).addFields(hasFields ? fields : new String[] { PATH })
-                .addSort(sortField, SortOrder.DESC.toString().equalsIgnoreCase(sortOrder) ? SortOrder.DESC : SortOrder.ASC)
-                .execute(new ActionListener<SearchResponse>() {
+        checkIfIndexExists(new ActionListener<ActionResponse>() {
+            @Override
+            public void onResponse(ActionResponse response) {
+                final boolean hasFields = !(fields == null || fields.length == 0);
+                client.prepareSearch(index).setTypes(type).setSize(size).setFrom(from).addFields(hasFields ? fields : new String[] { PATH })
+                        .addSort(sortField, SortOrder.DESC.toString().equalsIgnoreCase(sortOrder) ? SortOrder.DESC : SortOrder.ASC)
+                        .execute(new ActionListener<SearchResponse>() {
 
-                    @Override
-                    public void onResponse(final SearchResponse response) {
-                        final List<Object> objList = new ArrayList<>();
-                        for (final SearchHit hit : response.getHits().getHits()) {
-                            if (hasFields) {
-                                Map<String, Object> objMap = new HashMap<>();
-                                for (final String field : fields) {
-                                    objMap.put(field, hit.getFields().get(field).getValue());
+                            @Override
+                            public void onResponse(final SearchResponse response) {
+                                final List<Object> objList = new ArrayList<>();
+                                for (final SearchHit hit : response.getHits().getHits()) {
+                                    if (hasFields) {
+                                        Map<String, Object> objMap = new HashMap<>();
+                                        for (final String field : fields) {
+                                            objMap.put(field, hit.getFields().get(field).getValue());
+                                        }
+                                        objList.add(objMap);
+                                    } else {
+                                        objList.add(hit.getFields().get(PATH).getValue());
+                                    }
                                 }
-                                objList.add(objMap);
-                            } else {
-                                objList.add(hit.getFields().get(PATH).getValue());
+                                listener.onResponse(objList);
                             }
-                        }
-                        listener.onResponse(objList);
-                    }
 
-                    @Override
-                    public void onFailure(final Throwable e) {
-                        listener.onFailure(e);
-                    }
-                });
+                            @Override
+                            public void onFailure(final Throwable e) {
+                                listener.onFailure(e);
+                            }
+                        });
+            }
+
+            @Override
+            public void onFailure(Throwable e) {
+                listener.onFailure(e);
+            }
+        });
     }
 
     private String getId(final String path) {
@@ -280,10 +339,20 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
     }
 
     public void resetSync(final ActionListener<ConfigResetSyncResponse> listener) {
-        final ClusterState state = clusterService.state();
-        final DiscoveryNodes nodes = state.nodes();
-        final UnmodifiableIterator<DiscoveryNode> nodesIt = nodes.dataNodes().valuesIt();
-        resetSync(nodesIt, listener);
+        checkIfIndexExists(new ActionListener<ActionResponse>() {
+            @Override
+            public void onResponse(ActionResponse response) {
+                final ClusterState state = clusterService.state();
+                final DiscoveryNodes nodes = state.nodes();
+                final UnmodifiableIterator<DiscoveryNode> nodesIt = nodes.dataNodes().valuesIt();
+                resetSync(nodesIt, listener);
+            }
+
+            @Override
+            public void onFailure(Throwable e) {
+                listener.onFailure(e);
+            }
+        });
     }
 
     private void resetSync(final UnmodifiableIterator<DiscoveryNode> nodesIt, final ActionListener<ConfigResetSyncResponse> listener) {
@@ -317,19 +386,50 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
         }
     }
 
-    private void restartUpdater() {
-        if (logger.isInfoEnabled()) {
-            logger.info("Restarting ConfigFileUpdater...");
+    private void restartUpdater(final ActionListener<ActionResponse> listener) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("Restarting ConfigFileUpdater...");
         }
-        configFileUpdater.terminate();
-        startUpdater();
+        try {
+            if (configFileUpdater != null) {
+                configFileUpdater.terminate();
+            }
+            checkIfIndexExists(new ActionListener<ActionResponse>() {
+                @Override
+                public void onResponse(ActionResponse response) {
+                    final TimeValue time = startUpdater();
+                    if (time.millis() >= 0) {
+                        logger.info("ConfigFileUpdater is started at {} intervals.", time);
+                    }
+                    listener.onResponse(response);
+                }
+
+                @Override
+                public void onFailure(Throwable e) {
+                    logger.error("Failed to start ConfigFileUpdater.", e);
+                    listener.onFailure(e);
+                }
+            });
+        } catch (final Throwable t) {
+            listener.onFailure(t);
+        }
     }
 
     public void flush(final ActionListener<ConfigFileFlushResponse> listener) {
-        final ClusterState state = clusterService.state();
-        final DiscoveryNodes nodes = state.nodes();
-        final UnmodifiableIterator<DiscoveryNode> nodesIt = nodes.dataNodes().valuesIt();
-        flushOnNode(nodesIt, listener);
+        checkIfIndexExists(new ActionListener<ActionResponse>() {
+            @Override
+            public void onResponse(ActionResponse response) {
+                final ClusterState state = clusterService.state();
+                final DiscoveryNodes nodes = state.nodes();
+                final UnmodifiableIterator<DiscoveryNode> nodesIt = nodes.dataNodes().valuesIt();
+                flushOnNode(nodesIt, listener);
+            }
+
+            @Override
+            public void onFailure(Throwable e) {
+                listener.onFailure(e);
+            }
+        });
     }
 
     private void flushOnNode(final UnmodifiableIterator<DiscoveryNode> nodesIt, final ActionListener<ConfigFileFlushResponse> listener) {
@@ -364,31 +464,50 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
     }
 
     public void getContent(final String path, final ActionListener<byte[]> listener) {
-        client.prepareGet(index, type, getId(path)).execute(new ActionListener<GetResponse>() {
-
+        checkIfIndexExists(new ActionListener<ActionResponse>() {
             @Override
-            public void onResponse(final GetResponse response) {
-                if (response.isExists()) {
-                    try {
-                        final byte[] configContent = Base64.decode((String) response.getSource().get(ConfigSyncService.CONTENT));
-                        listener.onResponse(configContent);
-                    } catch (final IOException e) {
-                        throw new ElasticsearchException("Failed to access the content.", e);
+            public void onResponse(ActionResponse response) {
+                client.prepareGet(index, type, getId(path)).execute(new ActionListener<GetResponse>() {
+                    @Override
+                    public void onResponse(final GetResponse response) {
+                        if (response.isExists()) {
+                            try {
+                                final byte[] configContent = Base64.decode((String) response.getSource().get(ConfigSyncService.CONTENT));
+                                listener.onResponse(configContent);
+                            } catch (final IOException e) {
+                                throw new ElasticsearchException("Failed to access the content.", e);
+                            }
+                        } else {
+                            listener.onResponse(null);
+                        }
                     }
-                } else {
-                    listener.onResponse(null);
-                }
+
+                    @Override
+                    public void onFailure(final Throwable e) {
+                        listener.onFailure(e);
+                    }
+                });
             }
 
             @Override
-            public void onFailure(final Throwable e) {
+            public void onFailure(Throwable e) {
                 listener.onFailure(e);
             }
         });
     }
 
     public void delete(final String path, final ActionListener<DeleteResponse> listener) {
-        client.prepareDelete(index, type, getId(path)).setRefresh(true).execute(listener);
+        checkIfIndexExists(new ActionListener<ActionResponse>() {
+            @Override
+            public void onResponse(ActionResponse response) {
+                client.prepareDelete(index, type, getId(path)).setRefresh(true).execute(listener);
+            }
+
+            @Override
+            public void onFailure(Throwable e) {
+                listener.onFailure(e);
+            }
+        });
     }
 
     private void updateConfigFile(final Map<String, Object> source) {
@@ -492,10 +611,10 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
             this.listener = listener;
 
             final Date now = new Date();
-            final QueryBuilder queryBuilder =QueryBuilders.boolQuery().filter(QueryBuilders.rangeQuery(TIMESTAMP).from(lastChecked));
+            final QueryBuilder queryBuilder = QueryBuilders.boolQuery().filter(QueryBuilders.rangeQuery(TIMESTAMP).from(lastChecked));
             lastChecked = now;
-            client.prepareSearch(index).setTypes(type).setQuery(queryBuilder).setScroll(scrollForUpdate)
-                    .setSize(sizeForUpdate).execute(this);
+            client.prepareSearch(index).setTypes(type).setQuery(queryBuilder).setScroll(scrollForUpdate).setSize(sizeForUpdate)
+                    .execute(this);
         }
 
         public void terminate() {
@@ -602,8 +721,25 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
 
         @Override
         public void messageReceived(final ResetSyncRequest request, final TransportChannel channel) throws Exception {
-            restartUpdater();
-            channel.sendResponse(new ResetSyncResponse(true));
+            restartUpdater(new ActionListener<ActionResponse>() {
+                @Override
+                public void onResponse(ActionResponse response) {
+                    try {
+                        channel.sendResponse(new ResetSyncResponse(true));
+                    } catch (IOException e) {
+                        throw new ElasticsearchException(e);
+                    }
+                }
+
+                @Override
+                public void onFailure(Throwable e) {
+                    try {
+                        channel.sendResponse(e);
+                    } catch (IOException ioe) {
+                        logger.error("Failed to send Reset response.", ioe);
+                    }
+                }
+            });
         }
     }
 
@@ -645,25 +781,23 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
         }
     }
 
-    private static void decodeToFile(String dataToDecode, String filename)
-            throws java.io.IOException {
+    private static void decodeToFile(String dataToDecode, String filename) throws java.io.IOException {
 
         Base64.OutputStream bos = null;
         try {
-            bos = new Base64.OutputStream(
-                    new java.io.FileOutputStream(filename), Base64.DECODE);
+            bos = new Base64.OutputStream(new java.io.FileOutputStream(filename), Base64.DECODE);
             bos.write(dataToDecode.getBytes(Base64.PREFERRED_ENCODING));
-        }   // end try
+        } // end try
         catch (java.io.IOException e) {
             throw e; // Catch and throw to execute finally{} block
-        }   // end catch: java.io.IOException
+        } // end catch: java.io.IOException
         finally {
             if (bos != null) {
                 try {
                     bos.close();
                 } catch (Exception e) {}
             }
-        }   // end finally
+        } // end finally
 
-    }   // end decodeToFile
+    } // end decodeToFile
 }
