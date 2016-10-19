@@ -33,8 +33,7 @@ public class ConfigSyncPluginTest extends TestCase {
 
     private String clusterName;
 
-    @Override
-    protected void setUp() throws Exception {
+    private void setupClusterRunnder(final Boolean fileUpdaterEnabled, final String flushInterval) {
         clusterName = "es-configsync-" + System.currentTimeMillis();
         // create runner instance
         runner = new ElasticsearchClusterRunner();
@@ -43,12 +42,15 @@ public class ConfigSyncPluginTest extends TestCase {
             @Override
             public void build(final int number, final Builder settingsBuilder) {
                 settingsBuilder.put("http.cors.enabled", true);
-                settingsBuilder.put("index.number_of_replicas", 0);
+                settingsBuilder.put("index.number_of_replicas", 1);
                 settingsBuilder.put("index.number_of_shards", 3);
                 settingsBuilder.put("http.cors.allow-origin", "*");
                 settingsBuilder.putArray("discovery.zen.ping.unicast.hosts", "localhost:9301-9310");
                 settingsBuilder.put("plugin.types", "org.codelibs.elasticsearch.configsync.ConfigSyncPlugin");
-                settingsBuilder.put("configsync.flush_interval", "1m");
+                settingsBuilder.put("configsync.flush_interval", flushInterval);
+                if (fileUpdaterEnabled != null) {
+                    settingsBuilder.put("configsync.file_updater.enabled", fileUpdaterEnabled.booleanValue());
+                }
             }
         }).build(newConfigs().clusterName(clusterName).numOfNode(numOfNode));
 
@@ -82,7 +84,59 @@ public class ConfigSyncPluginTest extends TestCase {
         }
     }
 
+    public void test_updaterDisabled() throws Exception {
+        setupClusterRunnder(false, "1s");
+
+        Node node = runner.node();
+
+        configFiles = new File[numOfNode];
+        for (int i = 0; i < numOfNode; i++) {
+            String confPath = runner.getNode(i).settings().get("path.conf");
+            configFiles[i] = new File(confPath, "test1.txt");
+        }
+
+        try (CurlResponse response = Curl.get(node, "/_configsync/file").execute()) {
+            Map<String, Object> contentMap = response.getContentAsMap();
+            assertEquals("true", contentMap.get("acknowledged").toString());
+            List<String> list = (List<String>) contentMap.get("path");
+            assertEquals(0, list.size());
+        }
+
+        try (CurlResponse response = Curl.post(node, "/_configsync/file").param("path", "test1.txt").body("Test1").execute()) {
+            Map<String, Object> contentMap = response.getContentAsMap();
+            assertEquals("true", contentMap.get("acknowledged").toString());
+        }
+
+        try (CurlResponse response = Curl.get(node, "/_configsync/file").execute()) {
+            Map<String, Object> contentMap = response.getContentAsMap();
+            assertEquals("true", contentMap.get("acknowledged").toString());
+            List<String> list = (List<String>) contentMap.get("path");
+            assertEquals(1, list.size());
+            assertEquals("test1.txt", list.get(0).toString());
+        }
+
+        Thread.sleep(1000L);
+
+        for (int i = 0; i < numOfNode; i++) {
+            assertFalse(configFiles[i].exists());
+        }
+
+        try (CurlResponse response = Curl.post(node, "/_configsync/reset").execute()) {
+            Map<String, Object> contentMap = response.getContentAsMap();
+            assertEquals("true", contentMap.get("acknowledged").toString());
+        }
+
+        Thread.sleep(2000L);
+
+        for (int i = 0; i < numOfNode; i++) {
+            assertTrue(configFiles[i].exists());
+            assertEquals("Test1", new String(getText(configFiles[i])));
+        }
+    }
+
     public void test_configFiles() throws Exception {
+        setupClusterRunnder(null, "1m");
+
         Node node = runner.node();
 
         {
@@ -253,6 +307,8 @@ public class ConfigSyncPluginTest extends TestCase {
     }
 
     public void test_configFiles_withFlush() throws Exception {
+        setupClusterRunnder(null, "1m");
+
         Node node = runner.node();
 
         configFiles = new File[numOfNode * 3];
