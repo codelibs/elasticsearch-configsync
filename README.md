@@ -64,3 +64,9 @@ The interval time is specified by configsync.flush_interval in /etc/elasticserch
 The default value is 1m.
 
     configsync.flush_interval: 1m
+
+### Reset
+
+To restart a scheduler for checking .configsync index, send POST request as below:
+
+    $ curl -XPOST localhost:9200/_configsync/reset
