@@ -64,7 +64,7 @@ public class ConfigSyncPluginTest extends TestCase {
                 break;
             }
             try {
-                Thread.sleep(1000L);
+                Thread.sleep(2000L);
             } catch (Exception e) {
                 // nothing
             }
@@ -115,7 +115,7 @@ public class ConfigSyncPluginTest extends TestCase {
             assertEquals("test1.txt", list.get(0).toString());
         }
 
-        Thread.sleep(1000L);
+        Thread.sleep(2000L);
 
         for (int i = 0; i < numOfNode; i++) {
             assertFalse(configFiles[i].exists());
@@ -181,7 +181,7 @@ public class ConfigSyncPluginTest extends TestCase {
             assertEquals("test1.txt", list.get(0).toString());
         }
 
-        Thread.sleep(1000L);
+        Thread.sleep(2000L);
 
         for (int i = 0; i < numOfNode; i++) {
             int base = i * 3;
@@ -217,7 +217,7 @@ public class ConfigSyncPluginTest extends TestCase {
             assertEquals("dir1/test2.txt", list.get(1).toString());
         }
 
-        Thread.sleep(1000L);
+        Thread.sleep(2000L);
 
         for (int i = 0; i < numOfNode; i++) {
             int base = i * 3;
@@ -246,13 +246,13 @@ public class ConfigSyncPluginTest extends TestCase {
             assertEquals("test1.txt", list.get(2).toString());
         }
 
-        Thread.sleep(1000L);
+        Thread.sleep(2000L);
 
         for (int i = 0; i < numOfNode; i++) {
             int base = i * 3;
-            assertTrue(configFiles[base].exists());
-            assertTrue(configFiles[base + 1].exists());
-            assertTrue(configFiles[base + 2].exists());
+            assertTrue(configFiles[base].getAbsolutePath(), configFiles[base].exists());
+            assertTrue(configFiles[base + 1].getAbsolutePath(), configFiles[base + 1].exists());
+            assertTrue(configFiles[base + 2].getAbsolutePath(), configFiles[base + 2].exists());
 
             assertEquals("Test1", new String(getText(configFiles[base])));
             assertEquals("Test2", new String(getText(configFiles[base + 1])));
