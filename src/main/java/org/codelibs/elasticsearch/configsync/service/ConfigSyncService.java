@@ -36,6 +36,7 @@ import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.ClusterService;
 import org.elasticsearch.cluster.ClusterState;
+import org.elasticsearch.cluster.health.ClusterHealthStatus;
 import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.cluster.node.DiscoveryNodes;
 import org.elasticsearch.common.Base64;
@@ -508,6 +509,15 @@ public class ConfigSyncService extends AbstractLifecycleComponent<ConfigSyncServ
                 listener.onFailure(e);
             }
         });
+    }
+
+    public void waitForStatus(final String waitForStatus, final String timeout, final ActionListener<ClusterHealthResponse> listener) {
+        try {
+            client.admin().cluster().prepareHealth(index).setWaitForStatus(ClusterHealthStatus.fromString(waitForStatus))
+                    .setTimeout(timeout).execute(listener);
+        } catch (Exception e) {
+            listener.onFailure(e);
+        }
     }
 
     private void updateConfigFile(final Map<String, Object> source) {

@@ -6,6 +6,7 @@ import org.codelibs.elasticsearch.configsync.module.ConfigSyncModule;
 import org.codelibs.elasticsearch.configsync.rest.RestConfigSyncFileAction;
 import org.codelibs.elasticsearch.configsync.rest.RestConfigSyncFlushAction;
 import org.codelibs.elasticsearch.configsync.rest.RestConfigSyncResetAction;
+import org.codelibs.elasticsearch.configsync.rest.RestConfigSyncWaitAction;
 import org.codelibs.elasticsearch.configsync.service.ConfigSyncService;
 import org.elasticsearch.cluster.ClusterModule;
 import org.elasticsearch.cluster.settings.Validator;
@@ -32,6 +33,7 @@ public class ConfigSyncPlugin extends Plugin {
         module.addRestAction(RestConfigSyncFileAction.class);
         module.addRestAction(RestConfigSyncResetAction.class);
         module.addRestAction(RestConfigSyncFlushAction.class);
+        module.addRestAction(RestConfigSyncWaitAction.class);
     }
 
     public void onModule(final ClusterModule module) {
