@@ -5,6 +5,7 @@ import static org.elasticsearch.rest.RestStatus.OK;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,29 +15,23 @@ import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.index.IndexResponse;
-import org.elasticsearch.client.Client;
-import org.elasticsearch.common.Base64;
+import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.json.JsonXContent;
-import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
-import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.search.lookup.SourceLookup;
 import org.elasticsearch.search.sort.SortOrder;
 
-public class RestConfigSyncFileAction extends BaseRestHandler {
+public class RestConfigSyncFileAction extends RestConfigSyncAction {
 
     private final ConfigSyncService configSyncService;
 
     @Inject
-    public RestConfigSyncFileAction(final Settings settings, final Client client, final RestController controller,
-            final ConfigSyncService configSyncService) {
-        super(settings, controller, client);
+    public RestConfigSyncFileAction(final Settings settings, final RestController controller, final ConfigSyncService configSyncService) {
+        super(settings);
         this.configSyncService = configSyncService;
 
         controller.registerHandler(RestRequest.Method.GET, "/_configsync/file", this);
@@ -45,15 +40,19 @@ public class RestConfigSyncFileAction extends BaseRestHandler {
     }
 
     @Override
-    protected void handleRequest(final RestRequest request, final RestChannel channel, final Client client) {
+    protected RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
         try {
             final BytesReference content = request.content();
             switch (request.method()) {
             case GET: {
-                String path = request.param(ConfigSyncService.PATH);
-                if (path == null && content != null && content.length() > 0) {
+                final String path;
+                if (request.param(ConfigSyncService.PATH) != null) {
+                    path = request.param(ConfigSyncService.PATH);
+                } else if (content != null && content.length() > 0) {
                     final Map<String, Object> sourceAsMap = SourceLookup.sourceAsMap(content);
                     path = (String) sourceAsMap.get(ConfigSyncService.PATH);
+                } else {
+                    path = null;
                 }
                 if (path == null) {
                     final String[] sortValues = request.param("sort", ConfigSyncService.PATH).split(":");
@@ -68,8 +67,8 @@ public class RestConfigSyncFileAction extends BaseRestHandler {
                     }
 
                     final String[] fields = request.paramAsStringArrayOrEmptyIfAll("fields");
-                    configSyncService.getPaths(request.paramAsInt("from", 0), request.paramAsInt("size", 10), fields, sortField, sortOrder,
-                            new ActionListener<List<Object>>() {
+                    return channel -> configSyncService.getPaths(request.paramAsInt("from", 0), request.paramAsInt("size", 10), fields,
+                            sortField, sortOrder, new ActionListener<List<Object>>() {
 
                                 @Override
                                 public void onResponse(final List<Object> response) {
@@ -79,37 +78,37 @@ public class RestConfigSyncFileAction extends BaseRestHandler {
                                 }
 
                                 @Override
-                                public void onFailure(final Throwable t) {
-                                    sendErrorResponse(channel, t);
+                                public void onFailure(final Exception e) {
+                                    sendErrorResponse(channel, e);
                                 }
                             });
                 } else {
-                    configSyncService.getContent(path, new ActionListener<byte[]>() {
+                    return channel -> configSyncService.getContent(path, new ActionListener<byte[]>() {
 
                         @Override
                         public void onResponse(final byte[] configContent) {
                             if (configContent != null) {
                                 channel.sendResponse(new BytesRestResponse(OK, "application/octet-stream", configContent));
                             } else {
-                                channel.sendResponse(new BytesRestResponse(NOT_FOUND));
+                                channel.sendResponse(new BytesRestResponse(NOT_FOUND, path + " is not found."));
                             }
                         }
 
                         @Override
-                        public void onFailure(final Throwable t) {
-                            sendErrorResponse(channel, t);
+                        public void onFailure(final Exception e) {
+                            sendErrorResponse(channel, e);
                         }
                     });
                 }
             }
-                break;
             case POST: {
                 if (content == null) {
                     throw new ElasticsearchException("content is empty.");
                 }
-                String path = request.param(ConfigSyncService.PATH);
+                final String path;
                 byte[] contentArray;
-                if (path != null) {
+                if (request.param(ConfigSyncService.PATH) != null) {
+                    path = request.param(ConfigSyncService.PATH);
                     try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
                         content.writeTo(out);
                         contentArray = out.toByteArray();
@@ -118,9 +117,9 @@ public class RestConfigSyncFileAction extends BaseRestHandler {
                     final Map<String, Object> sourceAsMap = SourceLookup.sourceAsMap(content);
                     path = (String) sourceAsMap.get(ConfigSyncService.PATH);
                     final String fileContent = (String) sourceAsMap.get(ConfigSyncService.CONTENT);
-                    contentArray = Base64.decode(fileContent);
+                    contentArray = Base64.getDecoder().decode(fileContent);
                 }
-                configSyncService.store(path, contentArray, new ActionListener<IndexResponse>() {
+                return channel -> configSyncService.store(path, contentArray, new ActionListener<IndexResponse>() {
 
                     @Override
                     public void onResponse(final IndexResponse arg0) {
@@ -128,70 +127,44 @@ public class RestConfigSyncFileAction extends BaseRestHandler {
                     }
 
                     @Override
-                    public void onFailure(final Throwable t) {
-                        sendErrorResponse(channel, t);
+                    public void onFailure(final Exception e) {
+                        sendErrorResponse(channel, e);
                     }
                 });
             }
-                break;
             case DELETE: {
-                String path = request.param(ConfigSyncService.PATH);
-                if (path == null && content != null && content.length() > 0) {
+                final String path;
+                if (request.param(ConfigSyncService.PATH) != null) {
+                    path = request.param(ConfigSyncService.PATH);
+                } else if (content != null && content.length() > 0) {
                     final Map<String, Object> sourceAsMap = SourceLookup.sourceAsMap(content);
                     path = (String) sourceAsMap.get(ConfigSyncService.PATH);
+                } else {
+                    path = null;
                 }
                 if (path == null) {
-                    sendErrorResponse(channel, new ElasticsearchException(ConfigSyncService.PATH + " is empty."));
-                    return;
+                    return channel -> sendErrorResponse(channel, new ElasticsearchException(ConfigSyncService.PATH + " is empty."));
                 }
-                configSyncService.delete(path, new ActionListener<DeleteResponse>() {
+                return channel -> configSyncService.delete(path, new ActionListener<DeleteResponse>() {
 
                     @Override
                     public void onResponse(final DeleteResponse response) {
                         final Map<String, Object> params = new HashMap<>();
-                        params.put("found", response.isFound());
+                        params.put("result", response.getResult().toString());
                         sendResponse(channel, params);
                     }
 
                     @Override
-                    public void onFailure(final Throwable t) {
-                        sendErrorResponse(channel, t);
+                    public void onFailure(final Exception e) {
+                        sendErrorResponse(channel, e);
                     }
                 });
             }
-                break;
-
             default:
-                sendErrorResponse(channel, new ElasticsearchException("Unknown request type."));
-                break;
+                return channel -> sendErrorResponse(channel, new ElasticsearchException("Unknown request type."));
             }
         } catch (final Exception e) {
-            sendErrorResponse(channel, e);
-        }
-    }
-
-    private void sendResponse(final RestChannel channel, final Map<String, Object> params) {
-        try {
-            final XContentBuilder builder = JsonXContent.contentBuilder();
-            builder.startObject();
-            builder.field("acknowledged", true);
-            if (params != null) {
-                for (final Map.Entry<String, Object> entry : params.entrySet()) {
-                    builder.field(entry.getKey(), entry.getValue());
-                }
-            }
-            builder.endObject();
-            channel.sendResponse(new BytesRestResponse(OK, builder));
-        } catch (final IOException e) {
-            throw new ElasticsearchException("Failed to create a resposne.", e);
-        }
-    }
-
-    private void sendErrorResponse(final RestChannel channel, final Throwable t) {
-        try {
-            channel.sendResponse(new BytesRestResponse(channel, t));
-        } catch (final Exception e) {
-            logger.error("Failed to send a failure response.", e);
+            return channel -> sendErrorResponse(channel, e);
         }
     }
 

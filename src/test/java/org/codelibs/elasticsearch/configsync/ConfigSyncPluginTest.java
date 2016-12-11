@@ -7,6 +7,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
@@ -14,12 +16,9 @@ import org.codelibs.elasticsearch.runner.ElasticsearchClusterRunner;
 import org.codelibs.elasticsearch.runner.net.Curl;
 import org.codelibs.elasticsearch.runner.net.CurlResponse;
 import org.elasticsearch.action.admin.cluster.settings.ClusterUpdateSettingsResponse;
-import org.elasticsearch.common.Base64;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.Settings.Builder;
 import org.elasticsearch.node.Node;
-
-import com.google.common.base.Charsets;
 
 import junit.framework.TestCase;
 
@@ -42,17 +41,15 @@ public class ConfigSyncPluginTest extends TestCase {
             @Override
             public void build(final int number, final Builder settingsBuilder) {
                 settingsBuilder.put("http.cors.enabled", true);
-                settingsBuilder.put("index.number_of_replicas", 1);
-                settingsBuilder.put("index.number_of_shards", 3);
                 settingsBuilder.put("http.cors.allow-origin", "*");
                 settingsBuilder.putArray("discovery.zen.ping.unicast.hosts", "localhost:9301-9310");
-                settingsBuilder.put("plugin.types", "org.codelibs.elasticsearch.configsync.ConfigSyncPlugin");
                 settingsBuilder.put("configsync.flush_interval", flushInterval);
                 if (fileUpdaterEnabled != null) {
                     settingsBuilder.put("configsync.file_updater.enabled", fileUpdaterEnabled.booleanValue());
                 }
             }
-        }).build(newConfigs().clusterName(clusterName).numOfNode(numOfNode));
+        }).build(newConfigs().clusterName(clusterName).numOfNode(numOfNode)
+                .pluginTypes("org.codelibs.elasticsearch.configsync.ConfigSyncPlugin"));
 
         // wait for yellow status
         runner.ensureYellow();
@@ -140,7 +137,7 @@ public class ConfigSyncPluginTest extends TestCase {
         Node node = runner.node();
 
         {
-            Settings settings = Settings.settingsBuilder().put("configsync.flush_interval", "1s").build();
+            Settings settings = Settings.builder().put("configsync.flush_interval", "1s").build();
             ClusterUpdateSettingsResponse response =
                     node.client().admin().cluster().prepareUpdateSettings().setPersistentSettings(settings).execute().actionGet();
             assertTrue(response.isAcknowledged());
@@ -192,9 +189,8 @@ public class ConfigSyncPluginTest extends TestCase {
             assertEquals("Test1", new String(getText(configFiles[base])));
         }
 
-        try (CurlResponse response = Curl.post(node, "/_configsync/file")
-                .body("{\"path\":\"dir1/test2.txt\",\"content\":\"" + Base64.encodeBytes("Test2".getBytes(Charsets.UTF_8)) + "\"}")
-                .execute()) {
+        try (CurlResponse response = Curl.post(node, "/_configsync/file").body("{\"path\":\"dir1/test2.txt\",\"content\":\""
+                + Base64.getEncoder().encodeToString("Test2".getBytes(StandardCharsets.UTF_8)) + "\"}").execute()) {
             Map<String, Object> contentMap = response.getContentAsMap();
             assertEquals("true", contentMap.get("acknowledged").toString());
         }
@@ -229,9 +225,8 @@ public class ConfigSyncPluginTest extends TestCase {
             assertEquals("Test2", new String(getText(configFiles[base + 1])));
         }
 
-        try (CurlResponse response = Curl.post(node, "/_configsync/file")
-                .body("{\"path\":\"dir1/dir2/test3.txt\",\"content\":\"" + Base64.encodeBytes("Test3".getBytes(Charsets.UTF_8)) + "\"}")
-                .execute()) {
+        try (CurlResponse response = Curl.post(node, "/_configsync/file").body("{\"path\":\"dir1/dir2/test3.txt\",\"content\":\""
+                + Base64.getEncoder().encodeToString("Test3".getBytes(StandardCharsets.UTF_8)) + "\"}").execute()) {
             Map<String, Object> contentMap = response.getContentAsMap();
             assertEquals("true", contentMap.get("acknowledged").toString());
         }
@@ -362,9 +357,8 @@ public class ConfigSyncPluginTest extends TestCase {
             assertEquals("Test1", new String(getText(configFiles[base])));
         }
 
-        try (CurlResponse response = Curl.post(node, "/_configsync/file")
-                .body("{\"path\":\"dir1/test2.txt\",\"content\":\"" + Base64.encodeBytes("Test2".getBytes(Charsets.UTF_8)) + "\"}")
-                .execute()) {
+        try (CurlResponse response = Curl.post(node, "/_configsync/file").body("{\"path\":\"dir1/test2.txt\",\"content\":\""
+                + Base64.getEncoder().encodeToString("Test2".getBytes(StandardCharsets.UTF_8)) + "\"}").execute()) {
             Map<String, Object> contentMap = response.getContentAsMap();
             assertEquals("true", contentMap.get("acknowledged").toString());
         }
@@ -393,9 +387,8 @@ public class ConfigSyncPluginTest extends TestCase {
             assertEquals("Test2", new String(getText(configFiles[base + 1])));
         }
 
-        try (CurlResponse response = Curl.post(node, "/_configsync/file")
-                .body("{\"path\":\"dir1/dir2/test3.txt\",\"content\":\"" + Base64.encodeBytes("Test3".getBytes(Charsets.UTF_8)) + "\"}")
-                .execute()) {
+        try (CurlResponse response = Curl.post(node, "/_configsync/file").body("{\"path\":\"dir1/dir2/test3.txt\",\"content\":\""
+                + Base64.getEncoder().encodeToString("Test3".getBytes(StandardCharsets.UTF_8)) + "\"}").execute()) {
             Map<String, Object> contentMap = response.getContentAsMap();
             assertEquals("true", contentMap.get("acknowledged").toString());
         }
