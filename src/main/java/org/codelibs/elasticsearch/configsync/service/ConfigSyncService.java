@@ -133,6 +133,8 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
 
     private boolean fileUpdaterEnabled;
 
+    private TimeValue flushInterval;
+
     @Inject
     public ConfigSyncService(final Settings settings, final Client client, final ClusterService clusterService,
             final TransportService transportService, final Environment env, final ThreadPool threadPool) {
@@ -155,6 +157,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
         scrollForUpdate = SCROLL_TIME_SETTING.get(settings);
         sizeForUpdate = SCROLL_SIZE_SETTING.get(settings);
         fileUpdaterEnabled = FILE_UPDATER_ENABLED_SETTING.get(settings);
+        flushInterval = FLUSH_INTERVAL_SETTING.get(settings);
 
         transportService.registerRequestHandler(ACTION_CONFIG_FLUSH, FileFlushRequest::new, ThreadPool.Names.GENERIC,
                 new ConfigFileFlushRequestHandler());
@@ -169,7 +172,8 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
             scheduledFuture.cancel(true);
         }
 
-        final TimeValue interval = FLUSH_INTERVAL_SETTING.get(clusterService.state().getMetaData().settings());
+        final TimeValue interval =
+                clusterService.state().getMetaData().settings().getAsTime(FLUSH_INTERVAL_SETTING.getKey(), flushInterval);
         if (interval.millis() < 0) {
             if (logger.isDebugEnabled()) {
                 logger.debug("ConfigFileUpdater is not scheduled.");
@@ -305,6 +309,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
                     builder.field(PATH, path);
                     builder.field(CONTENT, contentArray);
                     builder.field(TIMESTAMP, new Date());
+                    builder.endObject();
                     client.prepareIndex(index, type, id).setSource(builder).setRefreshPolicy(RefreshPolicy.IMMEDIATE).execute(listener);
                 } catch (final IOException e) {
                     throw new ElasticsearchException("Failed to register " + path, e);
@@ -642,7 +647,8 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
             this.listener = listener;
 
             final Date now = new Date();
-            final QueryBuilder queryBuilder = QueryBuilders.boolQuery().filter(QueryBuilders.rangeQuery(TIMESTAMP).from(lastChecked));
+            final QueryBuilder queryBuilder =
+                    QueryBuilders.boolQuery().filter(QueryBuilders.rangeQuery(TIMESTAMP).from(lastChecked.getTime()));
             lastChecked = now;
             client.prepareSearch(index).setTypes(type).setQuery(queryBuilder).setScroll(scrollForUpdate).setSize(sizeForUpdate)
                     .execute(this);
@@ -813,7 +819,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
     }
 
     private static void decodeToFile(String dataToDecode, String filename) throws java.io.IOException {
-        try (final Base64OutputStream os = new Base64OutputStream(new FileOutputStream(filename))) {
+        try (final Base64OutputStream os = new Base64OutputStream(new FileOutputStream(filename), false)) {
             os.write(dataToDecode.getBytes(StandardCharsets.UTF_8));
         }
     }

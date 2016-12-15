@@ -257,7 +257,7 @@ public class ConfigSyncPluginTest extends TestCase {
         try (CurlResponse response = Curl.delete(node, "/_configsync/file").param("path", "dir1/test2.txt").execute()) {
             Map<String, Object> contentMap = response.getContentAsMap();
             assertEquals("true", contentMap.get("acknowledged").toString());
-            assertEquals("true", contentMap.get("found").toString());
+            assertEquals("deleted", contentMap.get("result").toString());
         }
 
         try (CurlResponse response = Curl.get(node, "/_configsync/file").execute()) {
@@ -283,7 +283,7 @@ public class ConfigSyncPluginTest extends TestCase {
         try (CurlResponse response = Curl.delete(node, "/_configsync/file").body("{\"path\":\"test1.txt\"}").execute()) {
             Map<String, Object> contentMap = response.getContentAsMap();
             assertEquals("true", contentMap.get("acknowledged").toString());
-            assertEquals("true", contentMap.get("found").toString());
+            assertEquals("deleted", contentMap.get("result").toString());
         }
 
         try (CurlResponse response = Curl.get(node, "/_configsync/file").execute()) {
@@ -297,7 +297,7 @@ public class ConfigSyncPluginTest extends TestCase {
         try (CurlResponse response = Curl.delete(node, "/_configsync/file").body("{\"path\":\"test3.txt\"}").execute()) {
             Map<String, Object> contentMap = response.getContentAsMap();
             assertEquals("true", contentMap.get("acknowledged").toString());
-            assertEquals("false", contentMap.get("found").toString());
+            assertEquals("not_found", contentMap.get("result").toString());
         }
     }
 
@@ -420,10 +420,10 @@ public class ConfigSyncPluginTest extends TestCase {
         }
 
         try (CurlResponse response =
-                Curl.delete(node, "/_configsync/file").param("path", "dir1/test2.txt").param("sort", "@timestamp").execute()) {
+                Curl.delete(node, "/_configsync/file").param("path", "dir1/test2.txt").execute()) {
             Map<String, Object> contentMap = response.getContentAsMap();
             assertEquals("true", contentMap.get("acknowledged").toString());
-            assertEquals("true", contentMap.get("found").toString());
+            assertEquals("deleted", contentMap.get("result").toString());
         }
 
         try (CurlResponse response = Curl.get(node, "/_configsync/file").param("sort", "@timestamp").execute()) {
@@ -438,7 +438,7 @@ public class ConfigSyncPluginTest extends TestCase {
         try (CurlResponse response = Curl.delete(node, "/_configsync/file").body("{\"path\":\"test1.txt\"}").execute()) {
             Map<String, Object> contentMap = response.getContentAsMap();
             assertEquals("true", contentMap.get("acknowledged").toString());
-            assertEquals("true", contentMap.get("found").toString());
+            assertEquals("deleted", contentMap.get("result").toString());
         }
 
         try (CurlResponse response = Curl.get(node, "/_configsync/file").execute()) {
@@ -452,7 +452,7 @@ public class ConfigSyncPluginTest extends TestCase {
         try (CurlResponse response = Curl.delete(node, "/_configsync/file").body("{\"path\":\"test3.txt\"}").execute()) {
             Map<String, Object> contentMap = response.getContentAsMap();
             assertEquals("true", contentMap.get("acknowledged").toString());
-            assertEquals("false", contentMap.get("found").toString());
+            assertEquals("not_found", contentMap.get("result").toString());
         }
     }
 

@@ -150,7 +150,7 @@ public class RestConfigSyncFileAction extends RestConfigSyncAction {
                     @Override
                     public void onResponse(final DeleteResponse response) {
                         final Map<String, Object> params = new HashMap<>();
-                        params.put("result", response.getResult().toString());
+                        params.put("result", response.getResult().toString().toLowerCase());
                         sendResponse(channel, params);
                     }
 
