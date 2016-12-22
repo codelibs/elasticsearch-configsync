@@ -67,8 +67,10 @@ public class RestConfigSyncFileAction extends RestConfigSyncAction {
                     }
 
                     final String[] fields = request.paramAsStringArrayOrEmptyIfAll("fields");
-                    return channel -> configSyncService.getPaths(request.paramAsInt("from", 0), request.paramAsInt("size", 10), fields,
-                            sortField, sortOrder, new ActionListener<List<Object>>() {
+                    final int from = request.paramAsInt("from", 0);
+                    final int size = request.paramAsInt("size", 10);
+                    return channel -> configSyncService.getPaths(from, size, fields, sortField, sortOrder,
+                            new ActionListener<List<Object>>() {
 
                                 @Override
                                 public void onResponse(final List<Object> response) {

@@ -31,19 +31,20 @@ public class RestConfigSyncWaitAction extends RestConfigSyncAction {
         try {
             switch (request.method()) {
             case GET:
-                return channel -> configSyncService.waitForStatus(request.param("status", "yellow"), request.param("timeout", "30s"),
-                        new ActionListener<ClusterHealthResponse>() {
+                final String status = request.param("status", "yellow");
+                final String timeout = request.param("timeout", "30s");
+                return channel -> configSyncService.waitForStatus(status, timeout, new ActionListener<ClusterHealthResponse>() {
 
-                            @Override
-                            public void onResponse(final ClusterHealthResponse response) {
-                                sendResponse(channel, null);
-                            }
+                    @Override
+                    public void onResponse(final ClusterHealthResponse response) {
+                        sendResponse(channel, null);
+                    }
 
-                            @Override
-                            public void onFailure(final Exception e) {
-                                sendErrorResponse(channel, e);
-                            }
-                        });
+                    @Override
+                    public void onFailure(final Exception e) {
+                        sendErrorResponse(channel, e);
+                    }
+                });
             default:
                 return channel -> sendErrorResponse(channel, new ElasticsearchException("Unknown request type."));
             }
