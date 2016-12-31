@@ -57,6 +57,7 @@ import org.elasticsearch.common.settings.Setting.Property;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.index.IndexNotFoundException;
@@ -259,17 +260,24 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
         try (final Reader in = new InputStreamReader(ConfigSyncService.class.getClassLoader().getResourceAsStream(FILE_MAPPING_JSON),
                 StandardCharsets.UTF_8)) {
             final String source = Streams.copyToString(in);
-            client.admin().indices().prepareCreate(index).addMapping(type, source).execute(new ActionListener<CreateIndexResponse>() {
-                @Override
-                public void onResponse(final CreateIndexResponse response) {
-                    waitForIndex(listener);
-                }
+            final XContentBuilder settingsBuilder = XContentFactory.jsonBuilder()//
+                    .startObject()//
+                    .startObject("index")//
+                    .field("number_of_replicas", 0)//
+                    .endObject()//
+                    .endObject();
+            client.admin().indices().prepareCreate(index).setSettings(settingsBuilder).addMapping(type, source)
+                    .execute(new ActionListener<CreateIndexResponse>() {
+                        @Override
+                        public void onResponse(final CreateIndexResponse response) {
+                            waitForIndex(listener);
+                        }
 
-                @Override
-                public void onFailure(final Exception e) {
-                    listener.onFailure(e);
-                }
-            });
+                        @Override
+                        public void onFailure(final Exception e) {
+                            listener.onFailure(e);
+                        }
+                    });
         } catch (final IOException e) {
             listener.onFailure(e);
         }
