@@ -4,43 +4,62 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Supplier;
 
-import org.codelibs.elasticsearch.configsync.module.ConfigSyncModule;
 import org.codelibs.elasticsearch.configsync.rest.RestConfigSyncFileAction;
 import org.codelibs.elasticsearch.configsync.rest.RestConfigSyncFlushAction;
 import org.codelibs.elasticsearch.configsync.rest.RestConfigSyncResetAction;
 import org.codelibs.elasticsearch.configsync.rest.RestConfigSyncWaitAction;
 import org.codelibs.elasticsearch.configsync.service.ConfigSyncService;
+import org.elasticsearch.client.Client;
+import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
+import org.elasticsearch.cluster.node.DiscoveryNodes;
+import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.component.LifecycleComponent;
-import org.elasticsearch.common.inject.Module;
+import org.elasticsearch.common.settings.ClusterSettings;
+import org.elasticsearch.common.settings.IndexScopedSettings;
 import org.elasticsearch.common.settings.Setting;
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.settings.SettingsFilter;
+import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.plugins.ActionPlugin;
 import org.elasticsearch.plugins.Plugin;
+import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestHandler;
+import org.elasticsearch.script.ScriptService;
+import org.elasticsearch.threadpool.ThreadPool;
+import org.elasticsearch.watcher.ResourceWatcherService;
 
 public class ConfigSyncPlugin extends Plugin implements ActionPlugin {
 
-    @Override
-    public List<Class<? extends RestHandler>> getRestHandlers() {
-        return Arrays.asList(//
-                RestConfigSyncFileAction.class, //
-                RestConfigSyncResetAction.class, //
-                RestConfigSyncFlushAction.class, //
-                RestConfigSyncWaitAction.class);
-    }
+    private PluginComponent pluginComponent = new PluginComponent();
 
     @Override
-    public Collection<Module> createGuiceModules() {
-        final Collection<Module> modules = new ArrayList<Module>();
-        modules.add(new ConfigSyncModule());
-        return modules;
+    public List<RestHandler> getRestHandlers(Settings settings, RestController restController, ClusterSettings clusterSettings,
+            IndexScopedSettings indexScopedSettings, SettingsFilter settingsFilter, IndexNameExpressionResolver indexNameExpressionResolver,
+            Supplier<DiscoveryNodes> nodesInCluster) {
+        final ConfigSyncService service = pluginComponent.getConfigSyncService();
+        return Arrays.asList(//
+                new RestConfigSyncFileAction(settings, restController, service), //
+                new RestConfigSyncResetAction(settings, restController, service), //
+                new RestConfigSyncFlushAction(settings, restController, service), //
+                new RestConfigSyncWaitAction(settings, restController, service));
     }
 
     @Override
     public Collection<Class<? extends LifecycleComponent>> getGuiceServiceClasses() {
-        final Collection<Class<? extends LifecycleComponent>> services = new ArrayList<>();
+        Collection<Class<? extends LifecycleComponent>> services = new ArrayList<>();
         services.add(ConfigSyncService.class);
         return services;
+    }
+
+    @Override
+    public Collection<Object> createComponents(Client client, ClusterService clusterService, ThreadPool threadPool,
+            ResourceWatcherService resourceWatcherService, ScriptService scriptService,
+            NamedXContentRegistry xContentRegistry) {
+        Collection<Object> components = new ArrayList<>();
+        components.add(pluginComponent);
+        return components;
     }
 
     @Override
@@ -56,4 +75,15 @@ public class ConfigSyncPlugin extends Plugin implements ActionPlugin {
         );
     }
 
+    public static class PluginComponent {
+        private ConfigSyncService configSyncService;
+
+        public ConfigSyncService getConfigSyncService() {
+            return configSyncService;
+        }
+
+        public void setConfigSyncService(ConfigSyncService configSyncService) {
+            this.configSyncService = configSyncService;
+        }
+    }
 }

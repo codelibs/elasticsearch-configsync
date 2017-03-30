@@ -6,7 +6,6 @@ import org.codelibs.elasticsearch.configsync.action.ConfigResetSyncResponse;
 import org.codelibs.elasticsearch.configsync.service.ConfigSyncService;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.client.Client;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
@@ -18,7 +17,7 @@ public class RestConfigSyncResetAction extends RestConfigSyncAction {
     private final ConfigSyncService configSyncService;
 
     @Inject
-    public RestConfigSyncResetAction(final Settings settings, final Client client, final RestController controller,
+    public RestConfigSyncResetAction(final Settings settings, final RestController controller,
             final ConfigSyncService configSyncService) {
         super(settings);
         this.configSyncService = configSyncService;

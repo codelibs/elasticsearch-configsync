@@ -6,7 +6,6 @@ import org.codelibs.elasticsearch.configsync.action.ConfigFileFlushResponse;
 import org.codelibs.elasticsearch.configsync.service.ConfigSyncService;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.client.Client;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
@@ -18,7 +17,7 @@ public class RestConfigSyncFlushAction extends RestConfigSyncAction {
     private final ConfigSyncService configSyncService;
 
     @Inject
-    public RestConfigSyncFlushAction(final Settings settings, final Client client, final RestController controller,
+    public RestConfigSyncFlushAction(final Settings settings, final RestController controller,
             final ConfigSyncService configSyncService) {
         super(settings);
         this.configSyncService = configSyncService;

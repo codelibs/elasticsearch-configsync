@@ -38,7 +38,7 @@ Please file an [issue](https://github.com/codelibs/elasticsearch-configsync/issu
 
 ### Register File
 
-    $ curl -XPOST localhost:9200/_configsync/file?path=user-dict.txt --data-binary @user-dict.txt
+    $ curl -XPOST -H 'Content-Type:application/json' localhost:9200/_configsync/file?path=user-dict.txt --data-binary @user-dict.txt
 
 The above request is to add file info to .configsync index.
 path parameter is a synced file location under $ES_CONF directory(ex. /etc/elasticsearch/user-dict.txt).
@@ -47,20 +47,20 @@ path parameter is a synced file location under $ES_CONF directory(ex. /etc/elast
 
 Send GET request without path parameter:
 
-    $ curl -XGET localhost:9200/_configsync/file
+    $ curl -XGET -H 'Content-Type:application/json' localhost:9200/_configsync/file
     {"acknowledged":true,"path":["user-dict.txt"]}
 
 ### Get File
 
 Send GET request with path parameter:
 
-    $ curl -XGET localhost:9200/_configsync/file?path=user-dict.txt
+    $ curl -XGET -H 'Content-Type:application/json' localhost:9200/_configsync/file?path=user-dict.txt
 
 ### Delete File
 
 Send DELETE request with path parameter:
 
-    $ curl -XDELETE localhost:9200/_configsync/file?path=user-dict.txt
+    $ curl -XDELETE -H 'Content-Type:application/json' localhost:9200/_configsync/file?path=user-dict.txt
 
 ### Sync
 
@@ -74,4 +74,4 @@ The default value is 1m.
 
 To restart a scheduler for checking .configsync index, send POST request as below:
 
-    $ curl -XPOST localhost:9200/_configsync/reset
+    $ curl -XPOST -H 'Content-Type:application/json' localhost:9200/_configsync/reset

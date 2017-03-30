@@ -26,6 +26,7 @@ import java.util.function.Function;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Base64OutputStream;
+import org.codelibs.elasticsearch.configsync.ConfigSyncPlugin.PluginComponent;
 import org.codelibs.elasticsearch.configsync.action.ConfigFileFlushResponse;
 import org.codelibs.elasticsearch.configsync.action.ConfigResetSyncResponse;
 import org.elasticsearch.ElasticsearchException;
@@ -138,7 +139,8 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
 
     @Inject
     public ConfigSyncService(final Settings settings, final Client client, final ClusterService clusterService,
-            final TransportService transportService, final Environment env, final ThreadPool threadPool) {
+            final TransportService transportService, final Environment env, final ThreadPool threadPool,
+            final PluginComponent pluginComponent) {
         super(settings);
         this.client = client;
         this.clusterService = clusterService;
@@ -164,6 +166,8 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
                 new ConfigFileFlushRequestHandler());
         transportService.registerRequestHandler(ACTION_CONFIG_RESET, ResetSyncRequest::new, ThreadPool.Names.GENERIC,
                 new ConfigSyncResetRequestHandler());
+
+        pluginComponent.setConfigSyncService(this);
     }
 
     private TimeValue startUpdater() {
@@ -266,8 +270,8 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
                     .field("number_of_replicas", 0)//
                     .endObject()//
                     .endObject();
-            client.admin().indices().prepareCreate(index).setSettings(settingsBuilder).addMapping(type, source)
-                    .execute(new ActionListener<CreateIndexResponse>() {
+            client.admin().indices().prepareCreate(index).setSettings(settingsBuilder)
+                    .addMapping(type, source, XContentFactory.xContentType(source)).execute(new ActionListener<CreateIndexResponse>() {
                         @Override
                         public void onResponse(final CreateIndexResponse response) {
                             waitForIndex(listener);
