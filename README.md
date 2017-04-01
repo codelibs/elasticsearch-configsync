@@ -10,7 +10,8 @@ These files are managed in .configsync index, and each node sync up with them.
 
 | Version   | Tested on Elasticsearch |
 |:---------:|:-----------------------:|
-| master    | 5.1.X                   |
+| master    | 5.3.X                   |
+| 5.3.0     | 5.3.0                   |
 | 5.0.0     | 5.0.2                   |
 | 2.4.2     | 2.4.1                   |
 | 2.3.3     | 2.3.5                   |
@@ -28,7 +29,7 @@ Please file an [issue](https://github.com/codelibs/elasticsearch-configsync/issu
 
 ### For 5.x
 
-    $ $ES_HOME/bin/elasticsearch-plugin install org.codelibs:elasticsearch-configsync:5.0.0
+    $ $ES_HOME/bin/elasticsearch-plugin install org.codelibs:elasticsearch-configsync:5.3.0
 
 ### For 2.x
 
