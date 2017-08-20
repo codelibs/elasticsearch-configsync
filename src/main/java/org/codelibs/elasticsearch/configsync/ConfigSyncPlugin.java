@@ -32,12 +32,12 @@ import org.elasticsearch.watcher.ResourceWatcherService;
 
 public class ConfigSyncPlugin extends Plugin implements ActionPlugin {
 
-    private PluginComponent pluginComponent = new PluginComponent();
+    private final PluginComponent pluginComponent = new PluginComponent();
 
     @Override
-    public List<RestHandler> getRestHandlers(Settings settings, RestController restController, ClusterSettings clusterSettings,
-            IndexScopedSettings indexScopedSettings, SettingsFilter settingsFilter, IndexNameExpressionResolver indexNameExpressionResolver,
-            Supplier<DiscoveryNodes> nodesInCluster) {
+    public List<RestHandler> getRestHandlers(final Settings settings, final RestController restController, final ClusterSettings clusterSettings,
+            final IndexScopedSettings indexScopedSettings, final SettingsFilter settingsFilter, final IndexNameExpressionResolver indexNameExpressionResolver,
+            final Supplier<DiscoveryNodes> nodesInCluster) {
         final ConfigSyncService service = pluginComponent.getConfigSyncService();
         return Arrays.asList(//
                 new RestConfigSyncFileAction(settings, restController, service), //
@@ -48,16 +48,16 @@ public class ConfigSyncPlugin extends Plugin implements ActionPlugin {
 
     @Override
     public Collection<Class<? extends LifecycleComponent>> getGuiceServiceClasses() {
-        Collection<Class<? extends LifecycleComponent>> services = new ArrayList<>();
+        final Collection<Class<? extends LifecycleComponent>> services = new ArrayList<>();
         services.add(ConfigSyncService.class);
         return services;
     }
 
     @Override
-    public Collection<Object> createComponents(Client client, ClusterService clusterService, ThreadPool threadPool,
-            ResourceWatcherService resourceWatcherService, ScriptService scriptService,
-            NamedXContentRegistry xContentRegistry) {
-        Collection<Object> components = new ArrayList<>();
+    public Collection<Object> createComponents(final Client client, final ClusterService clusterService, final ThreadPool threadPool,
+            final ResourceWatcherService resourceWatcherService, final ScriptService scriptService,
+            final NamedXContentRegistry xContentRegistry) {
+        final Collection<Object> components = new ArrayList<>();
         components.add(pluginComponent);
         return components;
     }
@@ -82,7 +82,7 @@ public class ConfigSyncPlugin extends Plugin implements ActionPlugin {
             return configSyncService;
         }
 
-        public void setConfigSyncService(ConfigSyncService configSyncService) {
+        public void setConfigSyncService(final ConfigSyncService configSyncService) {
             this.configSyncService = configSyncService;
         }
     }

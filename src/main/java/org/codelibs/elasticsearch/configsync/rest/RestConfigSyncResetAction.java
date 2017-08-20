@@ -1,11 +1,11 @@
 package org.codelibs.elasticsearch.configsync.rest;
 
+import static org.elasticsearch.action.ActionListener.wrap;
+
 import java.io.IOException;
 
-import org.codelibs.elasticsearch.configsync.action.ConfigResetSyncResponse;
 import org.codelibs.elasticsearch.configsync.service.ConfigSyncService;
 import org.elasticsearch.ElasticsearchException;
-import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
@@ -30,18 +30,8 @@ public class RestConfigSyncResetAction extends RestConfigSyncAction {
         try {
             switch (request.method()) {
             case POST:
-                return channel -> configSyncService.resetSync(new ActionListener<ConfigResetSyncResponse>() {
-
-                    @Override
-                    public void onResponse(final ConfigResetSyncResponse response) {
-                        sendResponse(channel, null);
-                    }
-
-                    @Override
-                    public void onFailure(final Exception e) {
-                        sendErrorResponse(channel, e);
-                    }
-                });
+                return channel -> configSyncService
+                        .resetSync(wrap(response -> sendResponse(channel, null), e -> sendErrorResponse(channel, e)));
             default:
                 return channel -> sendErrorResponse(channel, new ElasticsearchException("Unknown request type."));
             }

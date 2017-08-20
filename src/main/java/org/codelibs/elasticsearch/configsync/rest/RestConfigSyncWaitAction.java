@@ -1,11 +1,11 @@
 package org.codelibs.elasticsearch.configsync.rest;
 
+import static org.elasticsearch.action.ActionListener.wrap;
+
 import java.io.IOException;
 
 import org.codelibs.elasticsearch.configsync.service.ConfigSyncService;
 import org.elasticsearch.ElasticsearchException;
-import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
@@ -32,18 +32,8 @@ public class RestConfigSyncWaitAction extends RestConfigSyncAction {
             case GET:
                 final String status = request.param("status", "yellow");
                 final String timeout = request.param("timeout", "30s");
-                return channel -> configSyncService.waitForStatus(status, timeout, new ActionListener<ClusterHealthResponse>() {
-
-                    @Override
-                    public void onResponse(final ClusterHealthResponse response) {
-                        sendResponse(channel, null);
-                    }
-
-                    @Override
-                    public void onFailure(final Exception e) {
-                        sendErrorResponse(channel, e);
-                    }
-                });
+                return channel -> configSyncService.waitForStatus(status, timeout,
+                        wrap(response -> sendResponse(channel, null), e -> sendErrorResponse(channel, e)));
             default:
                 return channel -> sendErrorResponse(channel, new ElasticsearchException("Unknown request type."));
             }

@@ -15,7 +15,7 @@ import org.elasticsearch.rest.RestChannel;
 
 public abstract class RestConfigSyncAction extends BaseRestHandler {
 
-    protected RestConfigSyncAction(Settings settings) {
+    protected RestConfigSyncAction(final Settings settings) {
         super(settings);
     }
 
