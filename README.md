@@ -8,7 +8,7 @@ These files are managed in .configsync index, and each node sync up with them.
 
 ## Version
 
-[Maven Repository](http://central.maven.org/maven2/org/codelibs/elasticsearch-configsync/)
+[Versions in Maven Repository](http://central.maven.org/maven2/org/codelibs/elasticsearch-configsync/)
 
 ### Issues/Questions
 
