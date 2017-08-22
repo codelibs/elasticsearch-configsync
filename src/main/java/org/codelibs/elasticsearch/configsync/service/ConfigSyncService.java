@@ -265,7 +265,9 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
 
     @Override
     protected void doStop() {
-        configFileUpdater.terminate();
+        if (configFileUpdater != null) {
+            configFileUpdater.terminate();
+        }
     }
 
     @Override
