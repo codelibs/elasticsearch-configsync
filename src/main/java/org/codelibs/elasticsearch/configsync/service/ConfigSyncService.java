@@ -58,6 +58,7 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.index.IndexNotFoundException;
@@ -251,7 +252,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
                     .endObject()//
                     .endObject();
             client.admin().indices().prepareCreate(index).setSettings(settingsBuilder)
-                    .addMapping(type, source, XContentFactory.xContentType(source))
+                    .addMapping(type, source, XContentType.JSON)
                     .execute(wrap(response -> waitForIndex(listener), listener::onFailure));
         } catch (final IOException e) {
             listener.onFailure(e);
@@ -304,11 +305,11 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
                             if (hasFields) {
                                 final Map<String, Object> objMap = new HashMap<>();
                                 for (final String field : fields) {
-                                    objMap.put(field, hit.getSource().get(field));
+                                    objMap.put(field, hit.getSourceAsMap().get(field));
                                 }
                                 objList.add(objMap);
                             } else {
-                                objList.add(hit.getSource().get(PATH));
+                                objList.add(hit.getSourceAsMap().get(PATH));
                             }
                         }
                         listener.onResponse(objList);
@@ -567,7 +568,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
                 listener.onResponse(null);
             } else {
                 for (final SearchHit hit : hits) {
-                    final Map<String, Object> source = hit.getSource();
+                    final Map<String, Object> source = hit.getSourceAsMap();
                     updateConfigFile(source);
                 }
                 final String scrollId = response.getScrollId();

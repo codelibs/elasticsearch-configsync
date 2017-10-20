@@ -41,4 +41,9 @@ public class RestConfigSyncWaitAction extends RestConfigSyncAction {
             return channel -> sendErrorResponse(channel, e);
         }
     }
+
+    @Override
+    public String getName() {
+        return "configsync_wait_action";
+    }
 }

@@ -16,12 +16,15 @@ import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.node.DiscoveryNodes;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.component.LifecycleComponent;
+import org.elasticsearch.common.io.stream.NamedWriteableRegistry;
 import org.elasticsearch.common.settings.ClusterSettings;
 import org.elasticsearch.common.settings.IndexScopedSettings;
 import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.SettingsFilter;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
+import org.elasticsearch.env.Environment;
+import org.elasticsearch.env.NodeEnvironment;
 import org.elasticsearch.plugins.ActionPlugin;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.rest.RestController;
@@ -54,9 +57,9 @@ public class ConfigSyncPlugin extends Plugin implements ActionPlugin {
     }
 
     @Override
-    public Collection<Object> createComponents(final Client client, final ClusterService clusterService, final ThreadPool threadPool,
-            final ResourceWatcherService resourceWatcherService, final ScriptService scriptService,
-            final NamedXContentRegistry xContentRegistry) {
+    public Collection<Object> createComponents(Client client, ClusterService clusterService, ThreadPool threadPool,
+            ResourceWatcherService resourceWatcherService, ScriptService scriptService, NamedXContentRegistry xContentRegistry,
+            Environment environment, NodeEnvironment nodeEnvironment, NamedWriteableRegistry namedWriteableRegistry) {
         final Collection<Object> components = new ArrayList<>();
         components.add(pluginComponent);
         return components;

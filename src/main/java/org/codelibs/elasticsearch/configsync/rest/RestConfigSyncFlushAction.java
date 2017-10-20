@@ -40,4 +40,8 @@ public class RestConfigSyncFlushAction extends RestConfigSyncAction {
         }
     }
 
+    @Override
+    public String getName() {
+        return "configsync_flush_action";
+    }
 }

@@ -129,4 +129,8 @@ public class RestConfigSyncFileAction extends RestConfigSyncAction {
         }
     }
 
+    @Override
+    public String getName() {
+        return "configsync_file_action";
+    }
 }

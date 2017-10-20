@@ -40,4 +40,8 @@ public class RestConfigSyncResetAction extends RestConfigSyncAction {
         }
     }
 
+    @Override
+    public String getName() {
+        return "configsync_reset_action";
+    }
 }

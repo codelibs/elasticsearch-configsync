@@ -61,7 +61,7 @@ public class ConfigSyncPluginTest extends TestCase {
                 break;
             }
             try {
-                Thread.sleep(2000L);
+                Thread.sleep(3000L);
             } catch (Exception e) {
                 // nothing
             }
@@ -88,8 +88,8 @@ public class ConfigSyncPluginTest extends TestCase {
 
         configFiles = new File[numOfNode];
         for (int i = 0; i < numOfNode; i++) {
-            String confPath = runner.getNode(i).settings().get("path.conf");
-            configFiles[i] = new File(confPath, "test1.txt");
+            String homePath = runner.getNode(i).settings().get("path.home");
+            configFiles[i] = new File(new File(homePath, "config"), "test1.txt");
         }
 
         try (CurlResponse response = Curl.get(node, "/_configsync/file").header("Content-Type", "application/json").execute()) {
@@ -113,7 +113,7 @@ public class ConfigSyncPluginTest extends TestCase {
             assertEquals("test1.txt", list.get(0).toString());
         }
 
-        Thread.sleep(2000L);
+        Thread.sleep(3000L);
 
         for (int i = 0; i < numOfNode; i++) {
             assertFalse(configFiles[i].exists());
@@ -124,7 +124,7 @@ public class ConfigSyncPluginTest extends TestCase {
             assertEquals("true", contentMap.get("acknowledged").toString());
         }
 
-        Thread.sleep(2000L);
+        Thread.sleep(3000L);
 
         for (int i = 0; i < numOfNode; i++) {
             assertTrue(configFiles[i].exists());
@@ -151,7 +151,8 @@ public class ConfigSyncPluginTest extends TestCase {
 
         configFiles = new File[numOfNode * 3];
         for (int i = 0; i < numOfNode; i++) {
-            String confPath = runner.getNode(i).settings().get("path.conf");
+            String homePath = runner.getNode(i).settings().get("path.home");
+            File confPath = new File(homePath, "config");
 
             int base = i * 3;
             configFiles[base] = new File(confPath, "test1.txt");
@@ -180,7 +181,7 @@ public class ConfigSyncPluginTest extends TestCase {
             assertEquals("test1.txt", list.get(0).toString());
         }
 
-        Thread.sleep(2000L);
+        Thread.sleep(3000L);
 
         for (int i = 0; i < numOfNode; i++) {
             int base = i * 3;
@@ -217,7 +218,7 @@ public class ConfigSyncPluginTest extends TestCase {
             assertEquals("dir1/test2.txt", list.get(1).toString());
         }
 
-        Thread.sleep(2000L);
+        Thread.sleep(3000L);
 
         for (int i = 0; i < numOfNode; i++) {
             int base = i * 3;
@@ -247,7 +248,7 @@ public class ConfigSyncPluginTest extends TestCase {
             assertEquals("test1.txt", list.get(2).toString());
         }
 
-        Thread.sleep(2000L);
+        Thread.sleep(3000L);
 
         for (int i = 0; i < numOfNode; i++) {
             int base = i * 3;
@@ -317,7 +318,8 @@ public class ConfigSyncPluginTest extends TestCase {
 
         configFiles = new File[numOfNode * 3];
         for (int i = 0; i < numOfNode; i++) {
-            String confPath = runner.getNode(i).settings().get("path.conf");
+            String homePath = runner.getNode(i).settings().get("path.home");
+            File confPath = new File(homePath, "config");
 
             int base = i * 3;
             configFiles[base] = new File(confPath, "test1.txt");
