@@ -42,7 +42,7 @@ public class ConfigSyncPluginTest extends TestCase {
             public void build(final int number, final Builder settingsBuilder) {
                 settingsBuilder.put("http.cors.enabled", true);
                 settingsBuilder.put("http.cors.allow-origin", "*");
-                settingsBuilder.putArray("discovery.zen.ping.unicast.hosts", "localhost:9301-9310");
+                settingsBuilder.putList("discovery.zen.ping.unicast.hosts", "localhost:9301-9310");
                 settingsBuilder.put("configsync.flush_interval", flushInterval);
                 if (fileUpdaterEnabled != null) {
                     settingsBuilder.put("configsync.file_updater.enabled", fileUpdaterEnabled.booleanValue());
