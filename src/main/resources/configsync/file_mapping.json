@@ -1,11 +1,5 @@
 {
   "file": {
-    "_source": {
-      "enabled": true
-    },
-    "_all": {
-      "enabled": false
-    },
     "properties": {
       "path": {
         "type": "keyword"
