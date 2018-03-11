@@ -16,6 +16,7 @@ import java.security.PrivilegedAction;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -96,6 +97,9 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
     public static final Setting<String> TYPE_SETTING =
             new Setting<>("configsync.type", s -> "file", Function.identity(), Property.NodeScope);
 
+    public static final Setting<String> XPACK_SECURITY_SETTING =
+            new Setting<>("configsync.xpack.security.user", s -> "", ConfigSyncService::xpackSecurityToken, Property.NodeScope);
+
     public static final String ACTION_CONFIG_FLUSH = "internal:indices/config/flush";
 
     public static final String ACTION_CONFIG_RESET = "internal:indices/config/reset_sync";
@@ -136,6 +140,16 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
 
     private final TimeValue flushInterval;
 
+    private final String authorizationToken;
+
+    private static String xpackSecurityToken(final String s) {
+        if (s == null || s.trim().length() == 0) {
+            return "";
+        }
+        final String basicAuth = java.util.Base64.getEncoder().encodeToString(s.getBytes(StandardCharsets.UTF_8));
+        return "Basic " + basicAuth;
+    }
+
     @Inject
     public ConfigSyncService(final Settings settings, final Client client, final ClusterService clusterService,
             final TransportService transportService, final Environment env, final ThreadPool threadPool,
@@ -160,6 +174,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
         sizeForUpdate = SCROLL_SIZE_SETTING.get(settings);
         fileUpdaterEnabled = FILE_UPDATER_ENABLED_SETTING.get(settings);
         flushInterval = FLUSH_INTERVAL_SETTING.get(settings);
+        authorizationToken = XPACK_SECURITY_SETTING.get(settings);
 
         transportService.registerRequestHandler(ACTION_CONFIG_FLUSH, FileFlushRequest::new, ThreadPool.Names.GENERIC,
                 new ConfigFileFlushRequestHandler());
@@ -167,6 +182,13 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
                 new ConfigSyncResetRequestHandler());
 
         pluginComponent.setConfigSyncService(this);
+    }
+
+    private Client client() {
+        if (authorizationToken.length() > 0) {
+            return client.filterWithHeader(Collections.singletonMap("Authorization", authorizationToken));
+        }
+        return this.client;
     }
 
     private TimeValue startUpdater() {
@@ -201,28 +223,33 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
             clusterService.addLifecycleListener(new LifecycleListener() {
                 @Override
                 public void afterStart() {
-                    client.admin().cluster().prepareHealth().setWaitForGreenStatus().execute(wrap(res -> {
-                        if (res.isTimedOut()) {
-                            logger.warn("Cluster service was timeouted.");
-                        }
-                        checkIfIndexExists(wrap(response -> {
-                            final TimeValue time = startUpdater();
-                            if (time.millis() >= 0) {
-                                logger.info("ConfigFileUpdater is started at {} intervals.", time);
-                            }
-                        }, e -> {
-                            logger.error("Failed to start ConfigFileUpdater.", e);
-                        }));
-                    }, e -> {
-                        logger.error("Failed to start ConfigFileUpdater.", e);
-                    }));
+                    waitForClusterReady();
                 }
             });
         }
     }
 
+    private void waitForClusterReady() {
+        // TODO client() does not work on cluster:monitor/health
+        client.admin().cluster().prepareHealth().setWaitForGreenStatus().execute(wrap(res -> {
+            if (res.isTimedOut()) {
+                logger.warn("Cluster service was timeouted.");
+            }
+            checkIfIndexExists(wrap(response -> {
+                final TimeValue time = startUpdater();
+                if (time.millis() >= 0) {
+                    logger.info("ConfigFileUpdater is started at {} intervals.", time);
+                }
+            }, e -> {
+                logger.error("Failed to start ConfigFileUpdater.", e);
+            }));
+        }, e -> {
+            logger.warn("Could not start ConfigFileUpdater.", e);
+        }));
+    }
+
     private void checkIfIndexExists(final ActionListener<ActionResponse> listener) {
-        client.admin().indices().prepareExists(index).execute(wrap(response -> {
+        client().admin().indices().prepareExists(index).execute(wrap(response -> {
             if (response.isExists()) {
                 if (logger.isDebugEnabled()) {
                     logger.debug(index + " exists.");
@@ -250,7 +277,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
                     .field("number_of_replicas", 0)//
                     .endObject()//
                     .endObject();
-            client.admin().indices().prepareCreate(index).setSettings(settingsBuilder)
+            client().admin().indices().prepareCreate(index).setSettings(settingsBuilder)
                     .addMapping(type, source, XContentFactory.xContentType(source))
                     .execute(wrap(response -> waitForIndex(listener), listener::onFailure));
         } catch (final IOException e) {
@@ -259,7 +286,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
     }
 
     private void waitForIndex(final ActionListener<ActionResponse> listener) {
-        client.admin().cluster().prepareHealth(index).setWaitForYellowStatus()
+        client().admin().cluster().prepareHealth(index).setWaitForYellowStatus()
                 .execute(wrap(response -> listener.onResponse(response), listener::onFailure));
     }
 
@@ -284,7 +311,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
                 builder.field(CONTENT, contentArray);
                 builder.field(TIMESTAMP, new Date());
                 builder.endObject();
-                client.prepareIndex(index, type, id).setSource(builder).setRefreshPolicy(RefreshPolicy.IMMEDIATE).execute(listener);
+                client().prepareIndex(index, type, id).setSource(builder).setRefreshPolicy(RefreshPolicy.IMMEDIATE).execute(listener);
             } catch (final IOException e) {
                 throw new ElasticsearchException("Failed to register " + path, e);
             }
@@ -295,7 +322,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
             final ActionListener<List<Object>> listener) {
         checkIfIndexExists(wrap(res -> {
             final boolean hasFields = !(fields == null || fields.length == 0);
-            client.prepareSearch(index).setTypes(type).setSize(size).setFrom(from)
+            client().prepareSearch(index).setTypes(type).setSize(size).setFrom(from)
                     .setFetchSource(hasFields ? fields : new String[] { PATH }, null)
                     .addSort(sortField, SortOrder.DESC.toString().equalsIgnoreCase(sortOrder) ? SortOrder.DESC : SortOrder.ASC)
                     .execute(wrap(response -> {
@@ -425,7 +452,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
 
     public void getContent(final String path, final ActionListener<byte[]> listener) {
         checkIfIndexExists(wrap(res -> {
-            client.prepareGet(index, type, getId(path)).execute(wrap(response -> {
+            client().prepareGet(index, type, getId(path)).execute(wrap(response -> {
                 if (response.isExists()) {
                     final byte[] configContent = Base64.decodeBase64((String) response.getSource().get(ConfigSyncService.CONTENT));
                     listener.onResponse(configContent);
@@ -438,13 +465,13 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
 
     public void delete(final String path, final ActionListener<DeleteResponse> listener) {
         checkIfIndexExists(
-                wrap(response -> client.prepareDelete(index, type, getId(path)).setRefreshPolicy(RefreshPolicy.IMMEDIATE).execute(listener),
+                wrap(response -> client().prepareDelete(index, type, getId(path)).setRefreshPolicy(RefreshPolicy.IMMEDIATE).execute(listener),
                         listener::onFailure));
     }
 
     public void waitForStatus(final String waitForStatus, final String timeout, final ActionListener<ClusterHealthResponse> listener) {
         try {
-            client.admin().cluster().prepareHealth(index).setWaitForStatus(ClusterHealthStatus.fromString(waitForStatus))
+            client().admin().cluster().prepareHealth(index).setWaitForStatus(ClusterHealthStatus.fromString(waitForStatus))
                     .setTimeout(timeout).execute(listener);
         } catch (final Exception e) {
             listener.onFailure(e);
@@ -543,7 +570,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
             final QueryBuilder queryBuilder =
                     QueryBuilders.boolQuery().filter(QueryBuilders.rangeQuery(TIMESTAMP).from(lastChecked.getTime()));
             lastChecked = now;
-            client.prepareSearch(index).setTypes(type).setQuery(queryBuilder).setScroll(scrollForUpdate).setSize(sizeForUpdate)
+            client().prepareSearch(index).setTypes(type).setQuery(queryBuilder).setScroll(scrollForUpdate).setSize(sizeForUpdate)
                     .execute(this);
         }
 
@@ -571,7 +598,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
                     updateConfigFile(source);
                 }
                 final String scrollId = response.getScrollId();
-                client.prepareSearchScroll(scrollId).setScroll(scrollForUpdate).execute(this);
+                client().prepareSearchScroll(scrollId).setScroll(scrollForUpdate).execute(this);
             }
         }
 
