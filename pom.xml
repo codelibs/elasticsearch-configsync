@@ -27,7 +27,7 @@
 		<version>9</version>
 	</parent>
 	<properties>
-		<elasticsearch.version>6.2.0</elasticsearch.version>
+		<elasticsearch.version>6.2.2</elasticsearch.version>
 		<elasticsearch.plugin.classname>org.codelibs.elasticsearch.configsync.ConfigSyncPlugin</elasticsearch.plugin.classname>
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<maven.compiler.target>1.8</maven.compiler.target>
@@ -116,7 +116,7 @@
 		<dependency>
 			<groupId>org.codelibs</groupId>
 			<artifactId>elasticsearch-cluster-runner</artifactId>
-			<version>${elasticsearch.version}.1</version>
+			<version>${elasticsearch.version}.0</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>

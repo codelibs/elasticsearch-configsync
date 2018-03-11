@@ -70,6 +70,7 @@ public class ConfigSyncPlugin extends Plugin implements ActionPlugin {
         return Arrays.asList(//
                 ConfigSyncService.INDEX_SETTING, //
                 ConfigSyncService.TYPE_SETTING, //
+                ConfigSyncService.XPACK_SECURITY_SETTING, //
                 ConfigSyncService.CONFIG_PATH_SETTING, //
                 ConfigSyncService.SCROLL_TIME_SETTING, //
                 ConfigSyncService.SCROLL_SIZE_SETTING, //
