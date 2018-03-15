@@ -101,9 +101,9 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
     public static final Setting<String> XPACK_SECURITY_SETTING =
             new Setting<>("configsync.xpack.security.user", s -> "", ConfigSyncService::xpackSecurityToken, Property.NodeScope);
 
-    public static final String ACTION_CONFIG_FLUSH = "internal:indices/config/flush";
+    public static final String ACTION_CONFIG_FLUSH = "cluster:configsync/flush";
 
-    public static final String ACTION_CONFIG_RESET = "internal:indices/config/reset_sync";
+    public static final String ACTION_CONFIG_RESET = "cluster:configsync/reset_sync";
 
     private static final String FILE_MAPPING_JSON = "configsync/file_mapping.json";
 
@@ -231,7 +231,6 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
     }
 
     private void waitForClusterReady() {
-        // TODO client() does not work on cluster:monitor/health
         client.admin().cluster().prepareHealth().setWaitForGreenStatus().execute(wrap(res -> {
             if (res.isTimedOut()) {
                 logger.warn("Cluster service was timeouted.");
@@ -287,7 +286,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
     }
 
     private void waitForIndex(final ActionListener<ActionResponse> listener) {
-        client().admin().cluster().prepareHealth(index).setWaitForYellowStatus()
+        client.admin().cluster().prepareHealth(index).setWaitForYellowStatus()
                 .execute(wrap(response -> listener.onResponse(response), listener::onFailure));
     }
 
@@ -472,7 +471,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
 
     public void waitForStatus(final String waitForStatus, final String timeout, final ActionListener<ClusterHealthResponse> listener) {
         try {
-            client().admin().cluster().prepareHealth(index).setWaitForStatus(ClusterHealthStatus.fromString(waitForStatus))
+            client.admin().cluster().prepareHealth(index).setWaitForStatus(ClusterHealthStatus.fromString(waitForStatus))
                     .setTimeout(timeout).execute(listener);
         } catch (final Exception e) {
             listener.onFailure(e);
