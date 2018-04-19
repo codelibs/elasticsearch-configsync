@@ -274,7 +274,9 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
             final XContentBuilder settingsBuilder = XContentFactory.jsonBuilder()//
                     .startObject()//
                     .startObject("index")//
+                    .field("number_of_shards", 1)//
                     .field("number_of_replicas", 0)//
+                    .field("auto_expand_replicas", "0-all")//
                     .endObject()//
                     .endObject();
             client().admin().indices().prepareCreate(index).setSettings(settingsBuilder)
