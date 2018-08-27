@@ -51,8 +51,6 @@ import org.elasticsearch.common.component.AbstractLifecycleComponent;
 import org.elasticsearch.common.component.LifecycleListener;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.io.Streams;
-import org.elasticsearch.common.io.stream.StreamInput;
-import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.settings.Setting.Property;
 import org.elasticsearch.common.settings.Settings;
@@ -632,19 +630,6 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
     }
 
     public static class FileFlushRequest extends TransportRequest {
-
-        public FileFlushRequest() {
-        }
-
-        @Override
-        public void readFrom(final StreamInput in) throws IOException {
-            super.readFrom(in);
-        }
-
-        @Override
-        public void writeTo(final StreamOutput out) throws IOException {
-            super.writeTo(out);
-        }
     }
 
     private static class FileFlushResponse extends AcknowledgedResponse {
@@ -654,18 +639,6 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
 
         FileFlushResponse(final boolean acknowledged) {
             super(acknowledged);
-        }
-
-        @Override
-        public void readFrom(final StreamInput in) throws IOException {
-            super.readFrom(in);
-            readAcknowledged(in);
-        }
-
-        @Override
-        public void writeTo(final StreamOutput out) throws IOException {
-            super.writeTo(out);
-            writeAcknowledged(out);
         }
     }
 
@@ -690,19 +663,6 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
     }
 
     public static class ResetSyncRequest extends TransportRequest {
-
-        public ResetSyncRequest() {
-        }
-
-        @Override
-        public void readFrom(final StreamInput in) throws IOException {
-            super.readFrom(in);
-        }
-
-        @Override
-        public void writeTo(final StreamOutput out) throws IOException {
-            super.writeTo(out);
-        }
     }
 
     private static class ResetSyncResponse extends AcknowledgedResponse {
@@ -712,18 +672,6 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
 
         ResetSyncResponse(final boolean acknowledged) {
             super(acknowledged);
-        }
-
-        @Override
-        public void readFrom(final StreamInput in) throws IOException {
-            super.readFrom(in);
-            readAcknowledged(in);
-        }
-
-        @Override
-        public void writeTo(final StreamOutput out) throws IOException {
-            super.writeTo(out);
-            writeAcknowledged(out);
         }
     }
 
