@@ -99,9 +99,9 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
     public static final Setting<String> XPACK_SECURITY_SETTING =
             new Setting<>("configsync.xpack.security.user", s -> "", ConfigSyncService::xpackSecurityToken, Property.NodeScope);
 
-    public static final String ACTION_CONFIG_FLUSH = "cluster:configsync/flush";
+    public static final String ACTION_CONFIG_FLUSH = "cluster:admin/configsync/flush";
 
-    public static final String ACTION_CONFIG_RESET = "cluster:configsync/reset_sync";
+    public static final String ACTION_CONFIG_RESET = "cluster:admin/configsync/reset_sync";
 
     private static final String FILE_MAPPING_JSON = "configsync/file_mapping.json";
 
