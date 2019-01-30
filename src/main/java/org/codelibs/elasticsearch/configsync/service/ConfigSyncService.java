@@ -29,6 +29,8 @@ import java.util.function.Function;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Base64OutputStream;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.codelibs.elasticsearch.configsync.ConfigSyncPlugin.PluginComponent;
 import org.codelibs.elasticsearch.configsync.action.ConfigFileFlushResponse;
 import org.codelibs.elasticsearch.configsync.action.ConfigResetSyncResponse;
@@ -51,6 +53,7 @@ import org.elasticsearch.common.component.AbstractLifecycleComponent;
 import org.elasticsearch.common.component.LifecycleListener;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.io.Streams;
+import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.settings.Setting.Property;
 import org.elasticsearch.common.settings.Settings;
@@ -76,6 +79,7 @@ import org.elasticsearch.transport.TransportResponseHandler;
 import org.elasticsearch.transport.TransportService;
 
 public class ConfigSyncService extends AbstractLifecycleComponent {
+    private static final Logger logger = LogManager.getLogger(ConfigSyncService.class);
 
     public static final Setting<Boolean> FILE_UPDATER_ENABLED_SETTING =
             Setting.boolSetting("configsync.file_updater.enabled", true, Property.NodeScope);
@@ -365,8 +369,10 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
                     new TransportResponseHandler<ResetSyncResponse>() {
 
                         @Override
-                        public ResetSyncResponse newInstance() {
-                            return new ResetSyncResponse();
+                        public ResetSyncResponse read(StreamInput in) throws IOException {
+                            final ResetSyncResponse response = new ResetSyncResponse();
+                            response.readFrom(in);
+                            return response;
                         }
 
                         @Override
@@ -428,8 +434,10 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
                     new TransportResponseHandler<FileFlushResponse>() {
 
                         @Override
-                        public FileFlushResponse newInstance() {
-                            return new FileFlushResponse();
+                        public FileFlushResponse read(StreamInput in) throws IOException {
+                            final FileFlushResponse response = new FileFlushResponse();
+                            response.readFrom(in);
+                            return response;
                         }
 
                         @Override
