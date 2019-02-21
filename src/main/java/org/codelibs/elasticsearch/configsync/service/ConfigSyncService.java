@@ -23,7 +23,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
@@ -69,6 +68,8 @@ import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.sort.SortOrder;
+import org.elasticsearch.tasks.Task;
+import org.elasticsearch.threadpool.Scheduler.ScheduledCancellable;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.threadpool.ThreadPool.Names;
 import org.elasticsearch.transport.TransportChannel;
@@ -137,7 +138,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
 
     private final TransportService transportService;
 
-    private volatile ScheduledFuture<?> scheduledFuture;
+    private volatile ScheduledCancellable scheduledCancellable;
 
     private final boolean fileUpdaterEnabled;
 
@@ -157,7 +158,6 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
     public ConfigSyncService(final Settings settings, final Client client, final ClusterService clusterService,
             final TransportService transportService, final Environment env, final ThreadPool threadPool,
             final PluginComponent pluginComponent) {
-        super(settings);
         this.client = client;
         this.clusterService = clusterService;
         this.transportService = transportService;
@@ -197,8 +197,8 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
     private TimeValue startUpdater() {
         configFileUpdater = new ConfigFileUpdater();
 
-        if (scheduledFuture != null) {
-            scheduledFuture.cancel(true);
+        if (scheduledCancellable != null) {
+            scheduledCancellable.cancel();
         }
 
         final TimeValue interval =
@@ -208,7 +208,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
                 logger.debug("ConfigFileUpdater is not scheduled.");
             }
         } else {
-            scheduledFuture = threadPool.schedule(interval, Names.SAME, configFileUpdater);
+            scheduledCancellable = threadPool.schedule(configFileUpdater, interval, Names.SAME);
             if (logger.isDebugEnabled()) {
                 logger.debug("Scheduled ConfigFileUpdater with " + interval);
             }
@@ -619,7 +619,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
     class ConfigFileFlushRequestHandler implements TransportRequestHandler<FileFlushRequest> {
 
         @Override
-        public void messageReceived(final FileFlushRequest request, final TransportChannel channel) throws Exception {
+        public void messageReceived(final FileFlushRequest request, final TransportChannel channel, final Task task) throws Exception {
             new ConfigFileWriter().execute(wrap(response -> {
                 try {
                     channel.sendResponse(new FileFlushResponse(true));
@@ -653,7 +653,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
     class ConfigSyncResetRequestHandler implements TransportRequestHandler<ResetSyncRequest> {
 
         @Override
-        public void messageReceived(final ResetSyncRequest request, final TransportChannel channel) throws Exception {
+        public void messageReceived(final ResetSyncRequest request, final TransportChannel channel, final Task task) throws Exception {
             restartUpdater(wrap(response -> {
                 try {
                     channel.sendResponse(new ResetSyncResponse(true));
