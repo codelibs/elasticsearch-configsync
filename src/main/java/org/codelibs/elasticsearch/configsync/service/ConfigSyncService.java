@@ -246,7 +246,8 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
                 logger.error("Failed to start ConfigFileUpdater.", e);
             }));
         }, e -> {
-            logger.warn("Could not start ConfigFileUpdater.", e);
+            logger.warn("Could not start ConfigFileUpdater. Retrying to start it.", e);
+            waitForClusterReady();
         }));
     }
 
