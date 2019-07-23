@@ -243,11 +243,12 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
                     logger.info("ConfigFileUpdater is started at {} intervals.", time);
                 }
             }, e -> {
-                logger.error("Failed to start ConfigFileUpdater.", e);
+                logger.warn("Could not create .configsync. Retrying to start it.", e);
+                threadPool.schedule(() -> waitForClusterReady(), TimeValue.timeValueSeconds(15), Names.GENERIC);
             }));
         }, e -> {
             logger.warn("Could not start ConfigFileUpdater. Retrying to start it.", e);
-            waitForClusterReady();
+            threadPool.schedule(() -> waitForClusterReady(), TimeValue.timeValueSeconds(15), Names.GENERIC);
         }));
     }
 
@@ -409,7 +410,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
                 }
                 listener.onResponse(response);
             }, e -> {
-                logger.error("Failed to start ConfigFileUpdater.", e);
+                logger.error("Failed to restart ConfigFileUpdater.", e);
                 listener.onFailure(e);
             }));
         } catch (final Exception e) {
