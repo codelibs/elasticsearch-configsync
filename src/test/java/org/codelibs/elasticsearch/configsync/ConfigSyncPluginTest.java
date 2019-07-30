@@ -94,7 +94,7 @@ public class ConfigSyncPluginTest extends TestCase {
         }
 
         try (CurlResponse response = EcrCurl.get(node, "/_configsync/file").header("Content-Type", "application/json").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
             List<String> list = (List<String>) contentMap.get("path");
             assertEquals(0, list.size());
@@ -102,12 +102,12 @@ public class ConfigSyncPluginTest extends TestCase {
 
         try (CurlResponse response = EcrCurl.post(node, "/_configsync/file").header("Content-Type", "application/json")
                 .param("path", "test1.txt").body("Test1").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
         }
 
         try (CurlResponse response = EcrCurl.get(node, "/_configsync/file").header("Content-Type", "application/json").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
             List<String> list = (List<String>) contentMap.get("path");
             assertEquals(1, list.size());
@@ -121,7 +121,7 @@ public class ConfigSyncPluginTest extends TestCase {
         }
 
         try (CurlResponse response = EcrCurl.post(node, "/_configsync/reset").header("Content-Type", "application/json").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
         }
 
@@ -146,7 +146,7 @@ public class ConfigSyncPluginTest extends TestCase {
         }
 
         try (CurlResponse response = EcrCurl.post(node, "/_configsync/reset").header("Content-Type", "application/json").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
         }
 
@@ -162,7 +162,7 @@ public class ConfigSyncPluginTest extends TestCase {
         }
 
         try (CurlResponse response = EcrCurl.get(node, "/_configsync/file").header("Content-Type", "application/json").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
             List<String> list = (List<String>) contentMap.get("path");
             assertEquals(0, list.size());
@@ -170,12 +170,12 @@ public class ConfigSyncPluginTest extends TestCase {
 
         try (CurlResponse response = EcrCurl.post(node, "/_configsync/file").header("Content-Type", "application/json")
                 .param("path", "test1.txt").body("Test1").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
         }
 
         try (CurlResponse response = EcrCurl.get(node, "/_configsync/file").header("Content-Type", "application/json").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
             List<String> list = (List<String>) contentMap.get("path");
             assertEquals(1, list.size());
@@ -197,12 +197,12 @@ public class ConfigSyncPluginTest extends TestCase {
                 .body("{\"path\":\"dir1/test2.txt\",\"content\":\""
                         + Base64.getEncoder().encodeToString("Test2".getBytes(StandardCharsets.UTF_8)) + "\"}")
                 .execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
         }
 
         try (CurlResponse response = EcrCurl.get(node, "/_configsync/file").header("Content-Type", "application/json").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
             List<String> list = (List<String>) contentMap.get("path");
             assertEquals(2, list.size());
@@ -211,7 +211,7 @@ public class ConfigSyncPluginTest extends TestCase {
         }
 
         try (CurlResponse response = EcrCurl.get(node, "/_configsync/file").header("Content-Type", "application/json").param("sort", "@timestamp").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
             List<String> list = (List<String>) contentMap.get("path");
             assertEquals(2, list.size());
@@ -235,12 +235,12 @@ public class ConfigSyncPluginTest extends TestCase {
                 .body("{\"path\":\"dir1/dir2/test3.txt\",\"content\":\""
                         + Base64.getEncoder().encodeToString("Test3".getBytes(StandardCharsets.UTF_8)) + "\"}")
                 .execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
         }
 
         try (CurlResponse response = EcrCurl.get(node, "/_configsync/file").header("Content-Type", "application/json").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
             List<String> list = (List<String>) contentMap.get("path");
             assertEquals(3, list.size());
@@ -264,13 +264,13 @@ public class ConfigSyncPluginTest extends TestCase {
 
         try (CurlResponse response = EcrCurl.delete(node, "/_configsync/file").header("Content-Type", "application/json")
                 .param("path", "dir1/test2.txt").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
             assertEquals("deleted", contentMap.get("result").toString());
         }
 
         try (CurlResponse response = EcrCurl.get(node, "/_configsync/file").header("Content-Type", "application/json").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
             List<String> list = (List<String>) contentMap.get("path");
             assertEquals(2, list.size());
@@ -280,7 +280,7 @@ public class ConfigSyncPluginTest extends TestCase {
 
         try (CurlResponse response = EcrCurl.get(node, "/_configsync/file").header("Content-Type", "application/json")
                 .param("fields", "path,@timestamp").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
             List<Map<String, Object>> list = (List<Map<String, Object>>) contentMap.get("file");
             assertEquals(2, list.size());
@@ -292,13 +292,13 @@ public class ConfigSyncPluginTest extends TestCase {
 
         try (CurlResponse response = EcrCurl.delete(node, "/_configsync/file").header("Content-Type", "application/json")
                 .body("{\"path\":\"test1.txt\"}").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
             assertEquals("deleted", contentMap.get("result").toString());
         }
 
         try (CurlResponse response = EcrCurl.get(node, "/_configsync/file").header("Content-Type", "application/json").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
             List<String> list = (List<String>) contentMap.get("path");
             assertEquals(1, list.size());
@@ -306,7 +306,7 @@ public class ConfigSyncPluginTest extends TestCase {
         }
 
         try (CurlResponse response = EcrCurl.delete(node, "/_configsync/file").header("Content-Type", "application/json").body("{\"path\":\"test3.txt\"}").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
             assertEquals("not_found", contentMap.get("result").toString());
         }
@@ -329,19 +329,19 @@ public class ConfigSyncPluginTest extends TestCase {
         }
 
         try (CurlResponse response = EcrCurl.get(node, "/_configsync/file").header("Content-Type", "application/json").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
             List<String> list = (List<String>) contentMap.get("path");
             assertEquals(0, list.size());
         }
 
         try (CurlResponse response = EcrCurl.post(node, "/_configsync/file").header("Content-Type", "application/json").param("path", "test1.txt").body("Test1").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
         }
 
         try (CurlResponse response = EcrCurl.get(node, "/_configsync/file").header("Content-Type", "application/json").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
             List<String> list = (List<String>) contentMap.get("path");
             assertEquals(1, list.size());
@@ -356,7 +356,7 @@ public class ConfigSyncPluginTest extends TestCase {
         }
 
         try (CurlResponse response = EcrCurl.post(node, "/_configsync/flush").header("Content-Type", "application/json").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
         }
 
@@ -373,13 +373,13 @@ public class ConfigSyncPluginTest extends TestCase {
                 .body("{\"path\":\"dir1/test2.txt\",\"content\":\""
                         + Base64.getEncoder().encodeToString("Test2".getBytes(StandardCharsets.UTF_8)) + "\"}")
                 .execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
         }
 
         try (CurlResponse response =
                 EcrCurl.get(node, "/_configsync/file").header("Content-Type", "application/json").param("sort", "@timestamp").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
             List<String> list = (List<String>) contentMap.get("path");
             assertEquals(2, list.size());
@@ -388,7 +388,7 @@ public class ConfigSyncPluginTest extends TestCase {
         }
 
         try (CurlResponse response = EcrCurl.post(node, "/_configsync/flush").header("Content-Type", "application/json").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
         }
 
@@ -406,13 +406,13 @@ public class ConfigSyncPluginTest extends TestCase {
                 .body("{\"path\":\"dir1/dir2/test3.txt\",\"content\":\""
                         + Base64.getEncoder().encodeToString("Test3".getBytes(StandardCharsets.UTF_8)) + "\"}")
                 .execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
         }
 
         try (CurlResponse response =
                 EcrCurl.get(node, "/_configsync/file").header("Content-Type", "application/json").param("sort", "@timestamp").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
             List<String> list = (List<String>) contentMap.get("path");
             assertEquals(3, list.size());
@@ -422,7 +422,7 @@ public class ConfigSyncPluginTest extends TestCase {
         }
 
         try (CurlResponse response = EcrCurl.post(node, "/_configsync/flush").header("Content-Type", "application/json").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
         }
 
@@ -439,14 +439,14 @@ public class ConfigSyncPluginTest extends TestCase {
 
         try (CurlResponse response = EcrCurl.delete(node, "/_configsync/file").header("Content-Type", "application/json")
                 .param("path", "dir1/test2.txt").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
             assertEquals("deleted", contentMap.get("result").toString());
         }
 
         try (CurlResponse response =
                 EcrCurl.get(node, "/_configsync/file").header("Content-Type", "application/json").param("sort", "@timestamp").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
             List<String> list = (List<String>) contentMap.get("path");
             assertEquals(2, list.size());
@@ -456,13 +456,13 @@ public class ConfigSyncPluginTest extends TestCase {
 
         try (CurlResponse response = EcrCurl.delete(node, "/_configsync/file").header("Content-Type", "application/json")
                 .body("{\"path\":\"test1.txt\"}").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
             assertEquals("deleted", contentMap.get("result").toString());
         }
 
         try (CurlResponse response = EcrCurl.get(node, "/_configsync/file").header("Content-Type", "application/json").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
             List<String> list = (List<String>) contentMap.get("path");
             assertEquals(1, list.size());
@@ -471,7 +471,7 @@ public class ConfigSyncPluginTest extends TestCase {
 
         try (CurlResponse response = EcrCurl.delete(node, "/_configsync/file").header("Content-Type", "application/json")
                 .body("{\"path\":\"test3.txt\"}").execute()) {
-            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser);
+            Map<String, Object> contentMap = response.getContent(EcrCurl.jsonParser());
             assertEquals("true", contentMap.get("acknowledged").toString());
             assertEquals("not_found", contentMap.get("result").toString());
         }
