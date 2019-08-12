@@ -372,9 +372,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
 
                         @Override
                         public ResetSyncResponse read(StreamInput in) throws IOException {
-                            final ResetSyncResponse response = new ResetSyncResponse();
-                            response.readFrom(in);
-                            return response;
+                            return new ResetSyncResponse(in);
                         }
 
                         @Override
@@ -437,9 +435,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
 
                         @Override
                         public FileFlushResponse read(StreamInput in) throws IOException {
-                            final FileFlushResponse response = new FileFlushResponse();
-                            response.readFrom(in);
-                            return response;
+                            return new FileFlushResponse(in);
                         }
 
                         @Override
@@ -644,7 +640,8 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
 
     private static class FileFlushResponse extends AcknowledgedResponse {
 
-        FileFlushResponse() {
+        FileFlushResponse(final StreamInput in) throws IOException {
+            super(in);
         }
 
         FileFlushResponse(final boolean acknowledged) {
@@ -677,7 +674,8 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
 
     private static class ResetSyncResponse extends AcknowledgedResponse {
 
-        ResetSyncResponse() {
+        ResetSyncResponse(final StreamInput in) throws IOException {
+            super(in);
         }
 
         ResetSyncResponse(final boolean acknowledged) {
