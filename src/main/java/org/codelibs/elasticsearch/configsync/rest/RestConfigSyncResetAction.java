@@ -19,7 +19,6 @@ public class RestConfigSyncResetAction extends RestConfigSyncAction {
     @Inject
     public RestConfigSyncResetAction(final Settings settings, final RestController controller,
             final ConfigSyncService configSyncService) {
-        super(settings);
         this.configSyncService = configSyncService;
 
         controller.registerHandler(RestRequest.Method.POST, "/_configsync/reset", this);

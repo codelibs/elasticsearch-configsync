@@ -28,7 +28,6 @@ public class RestConfigSyncFileAction extends RestConfigSyncAction {
 
     @Inject
     public RestConfigSyncFileAction(final Settings settings, final RestController controller, final ConfigSyncService configSyncService) {
-        super(settings);
         this.configSyncService = configSyncService;
 
         controller.registerHandler(RestRequest.Method.GET, "/_configsync/file", this);

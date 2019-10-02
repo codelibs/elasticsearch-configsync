@@ -179,9 +179,9 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
         flushInterval = FLUSH_INTERVAL_SETTING.get(settings);
         authorizationToken = XPACK_SECURITY_SETTING.get(settings);
 
-        transportService.registerRequestHandler(ACTION_CONFIG_FLUSH, FileFlushRequest::new, ThreadPool.Names.GENERIC,
+        transportService.registerRequestHandler(ACTION_CONFIG_FLUSH, ThreadPool.Names.GENERIC, FileFlushRequest::new,
                 new ConfigFileFlushRequestHandler());
-        transportService.registerRequestHandler(ACTION_CONFIG_RESET, ResetSyncRequest::new, ThreadPool.Names.GENERIC,
+        transportService.registerRequestHandler(ACTION_CONFIG_RESET, ThreadPool.Names.GENERIC, ResetSyncRequest::new,
                 new ConfigSyncResetRequestHandler());
 
         pluginComponent.setConfigSyncService(this);
@@ -636,6 +636,13 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
     }
 
     public static class FileFlushRequest extends TransportRequest {
+        FileFlushRequest() {
+            super();
+        }
+
+        FileFlushRequest(final StreamInput in) throws IOException {
+            super(in);
+        }
     }
 
     private static class FileFlushResponse extends AcknowledgedResponse {
@@ -670,6 +677,13 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
     }
 
     public static class ResetSyncRequest extends TransportRequest {
+        ResetSyncRequest() {
+            super();
+        }
+
+        ResetSyncRequest(final StreamInput in) throws IOException {
+            super(in);
+        }
     }
 
     private static class ResetSyncResponse extends AcknowledgedResponse {

@@ -19,7 +19,6 @@ public class RestConfigSyncFlushAction extends RestConfigSyncAction {
     @Inject
     public RestConfigSyncFlushAction(final Settings settings, final RestController controller,
             final ConfigSyncService configSyncService) {
-        super(settings);
         this.configSyncService = configSyncService;
 
         controller.registerHandler(RestRequest.Method.POST, "/_configsync/flush", this);

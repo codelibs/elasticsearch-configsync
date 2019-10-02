@@ -19,7 +19,6 @@ public class RestConfigSyncWaitAction extends RestConfigSyncAction {
     @Inject
     public RestConfigSyncWaitAction(final Settings settings, final RestController controller,
             final ConfigSyncService configSyncService) {
-        super(settings);
         this.configSyncService = configSyncService;
 
         controller.registerHandler(RestRequest.Method.GET, "/_configsync/wait", this);

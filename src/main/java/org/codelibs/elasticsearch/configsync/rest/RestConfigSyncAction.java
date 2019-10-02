@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.elasticsearch.ElasticsearchException;
-import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.rest.BaseRestHandler;
@@ -14,10 +13,6 @@ import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestChannel;
 
 public abstract class RestConfigSyncAction extends BaseRestHandler {
-
-    protected RestConfigSyncAction(final Settings settings) {
-        super(settings);
-    }
 
     protected void sendResponse(final RestChannel channel, final Map<String, Object> params) {
         try {
