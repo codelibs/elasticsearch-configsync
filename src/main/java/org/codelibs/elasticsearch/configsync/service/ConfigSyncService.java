@@ -210,7 +210,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
         } else {
             scheduledCancellable = threadPool.schedule(configFileUpdater, interval, Names.SAME);
             if (logger.isDebugEnabled()) {
-                logger.debug("Scheduled ConfigFileUpdater with " + interval);
+                logger.debug("Scheduled ConfigFileUpdater with {}", interval);
             }
         }
         return interval;
@@ -490,7 +490,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
             final String path = (String) source.get(PATH);
             final Path filePath = Paths.get(configPath, path.replace("..", ""));
             if (logger.isDebugEnabled()) {
-                logger.debug("Checking " + filePath);
+                logger.debug("Checking {}", filePath);
             }
             final Exception e = AccessController.doPrivileged((PrivilegedAction<Exception>) () -> {
                 try {
@@ -504,11 +504,11 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
                         final String content = (String) source.get(CONTENT);
                         final File parentFile = filePath.toFile().getParentFile();
                         if (!parentFile.exists() && !parentFile.mkdirs()) {
-                            logger.warn("Failed to create " + parentFile.getAbsolutePath());
+                            logger.warn("Failed to create {}", parentFile.getAbsolutePath());
                         }
                         final String absolutePath = filePath.toFile().getAbsolutePath();
                         decodeToFile(content, absolutePath);
-                        logger.info("Updated " + absolutePath);
+                        logger.info("Updated {}", absolutePath);
                     }
                 } catch (final Exception e1) {
                     return e1;
@@ -543,7 +543,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
         public void run() {
             if (writer.terminated.get()) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Terminated " + this);
+                    logger.debug("Terminated {}", this);
                 }
                 return;
             }
@@ -588,7 +588,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
         public void onResponse(final SearchResponse response) {
             if (terminated.get()) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Terminated " + this);
+                    logger.debug("Terminated {}", this);
                 }
                 listener.onFailure(new ElasticsearchException("Config Writing process was terminated."));
                 return;
