@@ -504,11 +504,11 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
                         final String content = (String) source.get(CONTENT);
                         final File parentFile = filePath.toFile().getParentFile();
                         if (!parentFile.exists() && !parentFile.mkdirs()) {
-                            logger.warn("Failed to create {}", parentFile.getAbsolutePath());
+                            logger.warn("Failed to create " + parentFile.getAbsolutePath());
                         }
                         final String absolutePath = filePath.toFile().getAbsolutePath();
                         decodeToFile(content, absolutePath);
-                        logger.info("Updated {}", absolutePath);
+                        logger.info("Updated " + absolutePath);
                     }
                 } catch (final Exception e1) {
                     return e1;
