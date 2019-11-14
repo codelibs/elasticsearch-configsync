@@ -256,7 +256,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
         client().admin().indices().prepareExists(index).execute(wrap(response -> {
             if (response.isExists()) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug(index + " exists.");
+                    logger.debug("{} exists.", index);
                 }
                 listener.onResponse(response);
             } else {
