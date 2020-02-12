@@ -61,6 +61,10 @@ The default value is 1m.
 
     configsync.flush_interval: 1m
 
+### Reloading
+
+This plugin reloads the user dictionary automatically when the sync occurs.
+
 ### Reset
 
 To restart a scheduler for checking .configsync index, send POST request as below:
