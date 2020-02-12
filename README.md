@@ -8,7 +8,7 @@ These files are managed in .configsync index, and each node sync up with them.
 
 ## Version
 
-[Versions in Maven Repository](http://central.maven.org/maven2/org/codelibs/elasticsearch-configsync/)
+[Versions in Maven Repository](https://repo1.maven.org/maven2/org/codelibs/elasticsearch-configsync/)
 
 ### Issues/Questions
 
@@ -17,13 +17,7 @@ Please file an [issue](https://github.com/codelibs/elasticsearch-configsync/issu
 
 ## Installation
 
-### For 5.x
-
-    $ $ES_HOME/bin/elasticsearch-plugin install org.codelibs:elasticsearch-configsync:5.5.0
-
-### For 2.x
-
-    $ $ES_HOME/bin/plugin install org.codelibs/elasticsearch-configsync/2.4.2
+    $ $ES_HOME/bin/elasticsearch-plugin install org.codelibs:elasticsearch-configsync:7.6.0
 
 ## Getting Started
 
