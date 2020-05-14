@@ -328,7 +328,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
             final ActionListener<List<Object>> listener) {
         checkIfIndexExists(wrap(res -> {
             final boolean hasFields = !(fields == null || fields.length == 0);
-            client().prepareSearch(index).setTypes(type).setSize(size).setFrom(from)
+            client().prepareSearch(index).setSize(size).setFrom(from)
                     .setFetchSource(hasFields ? fields : new String[] { PATH }, null)
                     .addSort(sortField, SortOrder.DESC.toString().equalsIgnoreCase(sortOrder) ? SortOrder.DESC : SortOrder.ASC)
                     .execute(wrap(response -> {
@@ -576,7 +576,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
             final QueryBuilder queryBuilder =
                     QueryBuilders.boolQuery().filter(QueryBuilders.rangeQuery(TIMESTAMP).from(lastChecked.getTime()));
             lastChecked = now;
-            client().prepareSearch(index).setTypes(type).setQuery(queryBuilder).setScroll(scrollForUpdate).setSize(sizeForUpdate)
+            client().prepareSearch(index).setQuery(queryBuilder).setScroll(scrollForUpdate).setSize(sizeForUpdate)
                     .execute(this);
         }
 

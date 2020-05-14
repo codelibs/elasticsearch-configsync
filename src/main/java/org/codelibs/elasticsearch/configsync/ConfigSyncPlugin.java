@@ -58,8 +58,10 @@ public class ConfigSyncPlugin extends Plugin implements ActionPlugin {
 
     @Override
     public Collection<Object> createComponents(Client client, ClusterService clusterService, ThreadPool threadPool,
-            ResourceWatcherService resourceWatcherService, ScriptService scriptService, NamedXContentRegistry xContentRegistry,
-            Environment environment, NodeEnvironment nodeEnvironment, NamedWriteableRegistry namedWriteableRegistry) {
+            ResourceWatcherService resourceWatcherService, ScriptService scriptService,
+            NamedXContentRegistry xContentRegistry, Environment environment,
+            NodeEnvironment nodeEnvironment, NamedWriteableRegistry namedWriteableRegistry,
+            IndexNameExpressionResolver indexNameExpressionResolver) {
         final Collection<Object> components = new ArrayList<>();
         components.add(pluginComponent);
         return components;

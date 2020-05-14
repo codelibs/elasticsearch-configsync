@@ -1,8 +1,12 @@
 package org.codelibs.elasticsearch.configsync.rest;
 
+import static java.util.Arrays.asList;
+import static java.util.Collections.unmodifiableList;
 import static org.elasticsearch.action.ActionListener.wrap;
+import static org.elasticsearch.rest.RestRequest.Method.GET;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.codelibs.elasticsearch.configsync.service.ConfigSyncService;
 import org.elasticsearch.ElasticsearchException;
@@ -20,8 +24,12 @@ public class RestConfigSyncWaitAction extends RestConfigSyncAction {
     public RestConfigSyncWaitAction(final Settings settings, final RestController controller,
             final ConfigSyncService configSyncService) {
         this.configSyncService = configSyncService;
+    }
 
-        controller.registerHandler(RestRequest.Method.GET, "/_configsync/wait", this);
+    @Override
+    public List<Route> routes() {
+        return unmodifiableList(asList(
+                new Route(GET, "/_configsync/wait")));
     }
 
     @Override

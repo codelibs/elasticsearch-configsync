@@ -1,6 +1,11 @@
 package org.codelibs.elasticsearch.configsync.rest;
 
+import static java.util.Arrays.asList;
+import static java.util.Collections.unmodifiableList;
 import static org.elasticsearch.action.ActionListener.wrap;
+import static org.elasticsearch.rest.RestRequest.Method.DELETE;
+import static org.elasticsearch.rest.RestRequest.Method.GET;
+import static org.elasticsearch.rest.RestRequest.Method.POST;
 import static org.elasticsearch.rest.RestStatus.NOT_FOUND;
 import static org.elasticsearch.rest.RestStatus.OK;
 
@@ -8,6 +13,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.codelibs.elasticsearch.configsync.service.ConfigSyncService;
@@ -29,10 +35,14 @@ public class RestConfigSyncFileAction extends RestConfigSyncAction {
     @Inject
     public RestConfigSyncFileAction(final Settings settings, final RestController controller, final ConfigSyncService configSyncService) {
         this.configSyncService = configSyncService;
+    }
 
-        controller.registerHandler(RestRequest.Method.GET, "/_configsync/file", this);
-        controller.registerHandler(RestRequest.Method.POST, "/_configsync/file", this);
-        controller.registerHandler(RestRequest.Method.DELETE, "/_configsync/file", this);
+    @Override
+    public List<Route> routes() {
+        return unmodifiableList(asList(
+                new Route(GET, "/_configsync/file"),
+                new Route(POST, "/_configsync/file"),
+                new Route(DELETE, "/_configsync/file")));
     }
 
     @Override
