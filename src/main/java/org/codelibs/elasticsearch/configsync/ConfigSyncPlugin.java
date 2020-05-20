@@ -3,6 +3,7 @@ package org.codelibs.elasticsearch.configsync;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -25,15 +26,17 @@ import org.elasticsearch.common.settings.SettingsFilter;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.env.NodeEnvironment;
+import org.elasticsearch.indices.SystemIndexDescriptor;
 import org.elasticsearch.plugins.ActionPlugin;
 import org.elasticsearch.plugins.Plugin;
+import org.elasticsearch.plugins.SystemIndexPlugin;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestHandler;
 import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.watcher.ResourceWatcherService;
 
-public class ConfigSyncPlugin extends Plugin implements ActionPlugin {
+public class ConfigSyncPlugin extends Plugin implements ActionPlugin, SystemIndexPlugin {
 
     private final PluginComponent pluginComponent = new PluginComponent();
 
@@ -79,6 +82,11 @@ public class ConfigSyncPlugin extends Plugin implements ActionPlugin {
                 ConfigSyncService.FLUSH_INTERVAL_SETTING, //
                 ConfigSyncService.FILE_UPDATER_ENABLED_SETTING//
         );
+    }
+
+    @Override
+    public Collection<SystemIndexDescriptor> getSystemIndexDescriptors() {
+        return Collections.unmodifiableList(Arrays.asList(new SystemIndexDescriptor(".configsync", "Contains config sync data")));
     }
 
     public static class PluginComponent {
