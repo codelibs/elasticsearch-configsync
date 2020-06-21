@@ -30,6 +30,7 @@ import org.elasticsearch.indices.SystemIndexDescriptor;
 import org.elasticsearch.plugins.ActionPlugin;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.plugins.SystemIndexPlugin;
+import org.elasticsearch.repositories.RepositoriesService;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestHandler;
 import org.elasticsearch.script.ScriptService;
@@ -64,7 +65,8 @@ public class ConfigSyncPlugin extends Plugin implements ActionPlugin, SystemInde
             ResourceWatcherService resourceWatcherService, ScriptService scriptService,
             NamedXContentRegistry xContentRegistry, Environment environment,
             NodeEnvironment nodeEnvironment, NamedWriteableRegistry namedWriteableRegistry,
-            IndexNameExpressionResolver indexNameExpressionResolver) {
+            IndexNameExpressionResolver indexNameExpressionResolver,
+            Supplier<RepositoriesService> repositoriesServiceSupplier) {
         final Collection<Object> components = new ArrayList<>();
         components.add(pluginComponent);
         return components;
@@ -85,7 +87,7 @@ public class ConfigSyncPlugin extends Plugin implements ActionPlugin, SystemInde
     }
 
     @Override
-    public Collection<SystemIndexDescriptor> getSystemIndexDescriptors() {
+    public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings) {
         return Collections.unmodifiableList(Arrays.asList(new SystemIndexDescriptor(".configsync", "Contains config sync data")));
     }
 

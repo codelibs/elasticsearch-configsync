@@ -202,7 +202,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
         }
 
         final TimeValue interval =
-                clusterService.state().getMetaData().settings().getAsTime(FLUSH_INTERVAL_SETTING.getKey(), flushInterval);
+                clusterService.state().getMetadata().settings().getAsTime(FLUSH_INTERVAL_SETTING.getKey(), flushInterval);
         if (interval.millis() < 0) {
             if (logger.isDebugEnabled()) {
                 logger.debug("ConfigFileUpdater is not scheduled.");
