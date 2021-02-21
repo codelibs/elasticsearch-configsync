@@ -14,12 +14,16 @@
  * along with this program. If not, see
  * <http://www.mongodb.com/licensing/server-side-public-license>.
  */
-package org.codelibs.elasticsearch.configsync.action;
+package org.codelibs.elasticsearch.configsync;
 
-import org.elasticsearch.action.support.master.AcknowledgedResponse;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-public class ConfigResetSyncResponse extends AcknowledgedResponse {
-    public ConfigResetSyncResponse(final boolean acknowledged) {
-        super(acknowledged);
+@SpringBootApplication
+public class ConfigSyncApplication {
+
+    public static void main(final String[] args) {
+        SpringApplication.run(ConfigSyncApplication.class, args);
     }
+
 }

@@ -14,12 +14,15 @@
  * along with this program. If not, see
  * <http://www.mongodb.com/licensing/server-side-public-license>.
  */
-package org.codelibs.elasticsearch.configsync.action;
+package org.codelibs.elasticsearch.configsync;
 
-import org.elasticsearch.action.support.master.AcknowledgedResponse;
+public class ConfigSyncConstants {
 
-public class ConfigResetSyncResponse extends AcknowledgedResponse {
-    public ConfigResetSyncResponse(final boolean acknowledged) {
-        super(acknowledged);
+    public static final String ELASTICSEARCH_HOME = "configsync.elasticsearch.home";
+
+    public static final String ELASTICSEARCH_CLUSTER_NAME = "configsync.elasticsearch.cluster_name";
+
+    private ConfigSyncConstants() {
+        // nothing
     }
 }

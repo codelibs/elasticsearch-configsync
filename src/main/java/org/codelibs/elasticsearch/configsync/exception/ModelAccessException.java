@@ -14,12 +14,20 @@
  * along with this program. If not, see
  * <http://www.mongodb.com/licensing/server-side-public-license>.
  */
-package org.codelibs.elasticsearch.configsync.action;
+package org.codelibs.elasticsearch.configsync.exception;
 
-import org.elasticsearch.action.support.master.AcknowledgedResponse;
+import java.io.IOException;
 
-public class ConfigResetSyncResponse extends AcknowledgedResponse {
-    public ConfigResetSyncResponse(final boolean acknowledged) {
-        super(acknowledged);
+public class ModelAccessException extends ConfigSyncSystemException {
+
+    private static final long serialVersionUID = 1L;
+
+    public ModelAccessException(final String message) {
+        super(message);
     }
+
+    public ModelAccessException(final String message, final IOException e) {
+        super(message, e);
+    }
+
 }
