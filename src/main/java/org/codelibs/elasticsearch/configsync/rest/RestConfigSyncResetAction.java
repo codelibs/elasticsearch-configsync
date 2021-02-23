@@ -1,19 +1,3 @@
-/*
- * Copyright 2012-2021 CodeLibs Project and the Others.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the Server Side Public License, version 1,
- * as published by MongoDB, Inc.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * Server Side Public License for more details.
- *
- * You should have received a copy of the Server Side Public License
- * along with this program. If not, see
- * <http://www.mongodb.com/licensing/server-side-public-license>.
- */
 package org.codelibs.elasticsearch.configsync.rest;
 
 import static java.util.Arrays.asList;
@@ -37,13 +21,15 @@ public class RestConfigSyncResetAction extends RestConfigSyncAction {
     private final ConfigSyncService configSyncService;
 
     @Inject
-    public RestConfigSyncResetAction(final Settings settings, final RestController controller, final ConfigSyncService configSyncService) {
+    public RestConfigSyncResetAction(final Settings settings, final RestController controller,
+            final ConfigSyncService configSyncService) {
         this.configSyncService = configSyncService;
     }
 
     @Override
     public List<Route> routes() {
-        return unmodifiableList(asList(new Route(POST, "/_configsync/reset")));
+        return unmodifiableList(asList(
+                new Route(POST, "/_configsync/reset")));
     }
 
     @Override

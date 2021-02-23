@@ -1,19 +1,3 @@
-/*
- * Copyright 2012-2021 CodeLibs Project and the Others.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the Server Side Public License, version 1,
- * as published by MongoDB, Inc.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * Server Side Public License for more details.
- *
- * You should have received a copy of the Server Side Public License
- * along with this program. If not, see
- * <http://www.mongodb.com/licensing/server-side-public-license>.
- */
 package org.codelibs.elasticsearch.configsync;
 
 import java.util.ArrayList;
@@ -58,9 +42,9 @@ public class ConfigSyncPlugin extends Plugin implements ActionPlugin, SystemInde
     private final PluginComponent pluginComponent = new PluginComponent();
 
     @Override
-    public List<RestHandler> getRestHandlers(final Settings settings, final RestController restController,
-            final ClusterSettings clusterSettings, final IndexScopedSettings indexScopedSettings, final SettingsFilter settingsFilter,
-            final IndexNameExpressionResolver indexNameExpressionResolver, final Supplier<DiscoveryNodes> nodesInCluster) {
+    public List<RestHandler> getRestHandlers(final Settings settings, final RestController restController, final ClusterSettings clusterSettings,
+            final IndexScopedSettings indexScopedSettings, final SettingsFilter settingsFilter, final IndexNameExpressionResolver indexNameExpressionResolver,
+            final Supplier<DiscoveryNodes> nodesInCluster) {
         final ConfigSyncService service = pluginComponent.getConfigSyncService();
         return Arrays.asList(//
                 new RestConfigSyncFileAction(settings, restController, service), //
@@ -77,11 +61,12 @@ public class ConfigSyncPlugin extends Plugin implements ActionPlugin, SystemInde
     }
 
     @Override
-    public Collection<Object> createComponents(final Client client, final ClusterService clusterService, final ThreadPool threadPool,
-            final ResourceWatcherService resourceWatcherService, final ScriptService scriptService,
-            final NamedXContentRegistry xContentRegistry, final Environment environment, final NodeEnvironment nodeEnvironment,
-            final NamedWriteableRegistry namedWriteableRegistry, final IndexNameExpressionResolver indexNameExpressionResolver,
-            final Supplier<RepositoriesService> repositoriesServiceSupplier) {
+    public Collection<Object> createComponents(Client client, ClusterService clusterService, ThreadPool threadPool,
+            ResourceWatcherService resourceWatcherService, ScriptService scriptService,
+            NamedXContentRegistry xContentRegistry, Environment environment,
+            NodeEnvironment nodeEnvironment, NamedWriteableRegistry namedWriteableRegistry,
+            IndexNameExpressionResolver indexNameExpressionResolver,
+            Supplier<RepositoriesService> repositoriesServiceSupplier) {
         final Collection<Object> components = new ArrayList<>();
         components.add(pluginComponent);
         return components;
@@ -102,7 +87,7 @@ public class ConfigSyncPlugin extends Plugin implements ActionPlugin, SystemInde
     }
 
     @Override
-    public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(final Settings settings) {
+    public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings) {
         return Collections.unmodifiableList(Arrays.asList(new SystemIndexDescriptor(".configsync", "Contains config sync data")));
     }
 

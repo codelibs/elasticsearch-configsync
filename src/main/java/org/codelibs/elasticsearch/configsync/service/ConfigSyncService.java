@@ -1,19 +1,3 @@
-/*
- * Copyright 2012-2021 CodeLibs Project and the Others.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the Server Side Public License, version 1,
- * as published by MongoDB, Inc.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * Server Side Public License for more details.
- *
- * You should have received a copy of the Server Side Public License
- * along with this program. If not, see
- * <http://www.mongodb.com/licensing/server-side-public-license>.
- */
 package org.codelibs.elasticsearch.configsync.service;
 
 import static org.elasticsearch.action.ActionListener.wrap;
@@ -81,7 +65,6 @@ import org.elasticsearch.env.Environment;
 import org.elasticsearch.index.IndexNotFoundException;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.node.NodeClosedException;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.sort.SortOrder;
@@ -89,7 +72,6 @@ import org.elasticsearch.tasks.Task;
 import org.elasticsearch.threadpool.Scheduler.ScheduledCancellable;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.threadpool.ThreadPool.Names;
-import org.elasticsearch.transport.ActionNotFoundTransportException;
 import org.elasticsearch.transport.TransportChannel;
 import org.elasticsearch.transport.TransportException;
 import org.elasticsearch.transport.TransportRequest;
@@ -104,7 +86,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
             Setting.boolSetting("configsync.file_updater.enabled", true, Property.NodeScope);
 
     public static final Setting<TimeValue> FLUSH_INTERVAL_SETTING =
-            Setting.timeSetting("configsync.flush_interval", TimeValue.timeValueMinutes(1), Property.NodeScope);
+            Setting.timeSetting("configsync.flush_interval", TimeValue.timeValueMinutes(1), Property.NodeScope, Property.Dynamic);
 
     public static final Setting<Integer> SCROLL_SIZE_SETTING = Setting.intSetting("configsync.scroll_size", 1, Property.NodeScope);
 
@@ -261,16 +243,12 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
                     logger.info("ConfigFileUpdater is started at {} intervals.", time);
                 }
             }, e -> {
-                if (e instanceof NodeClosedException) {
-                    logger.debug("Waiting for {} index. Retrying to start it.", index, e);
-                } else {
-                    logger.warn("Could not create {}. Retrying to start it.", index, e);
-                }
-                threadPool.schedule(this::waitForClusterReady, TimeValue.timeValueSeconds(15), Names.GENERIC);
+                logger.warn("Could not create .configsync. Retrying to start it.", e);
+                threadPool.schedule(() -> waitForClusterReady(), TimeValue.timeValueSeconds(15), Names.GENERIC);
             }));
         }, e -> {
             logger.warn("Could not start ConfigFileUpdater. Retrying to start it.", e);
-            threadPool.schedule(this::waitForClusterReady, TimeValue.timeValueSeconds(15), Names.GENERIC);
+            threadPool.schedule(() -> waitForClusterReady(), TimeValue.timeValueSeconds(15), Names.GENERIC);
         }));
     }
 
@@ -305,7 +283,8 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
                     .field("auto_expand_replicas", "0-all")//
                     .endObject()//
                     .endObject();
-            client().admin().indices().prepareCreate(index).setSettings(settingsBuilder).addMapping(type, source, XContentType.JSON)
+            client().admin().indices().prepareCreate(index).setSettings(settingsBuilder)
+                    .addMapping(type, source, XContentType.JSON)
                     .execute(wrap(response -> waitForIndex(listener), listener::onFailure));
         } catch (final IOException e) {
             listener.onFailure(e);
@@ -348,8 +327,9 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
     public void getPaths(final int from, final int size, final String[] fields, final String sortField, final String sortOrder,
             final ActionListener<List<Object>> listener) {
         checkIfIndexExists(wrap(res -> {
-            final boolean hasFields = ((fields != null) && (fields.length != 0));
-            client().prepareSearch(index).setSize(size).setFrom(from).setFetchSource(hasFields ? fields : new String[] { PATH }, null)
+            final boolean hasFields = !(fields == null || fields.length == 0);
+            client().prepareSearch(index).setSize(size).setFrom(from)
+                    .setFetchSource(hasFields ? fields : new String[] { PATH }, null)
                     .addSort(sortField, SortOrder.DESC.toString().equalsIgnoreCase(sortOrder) ? SortOrder.DESC : SortOrder.ASC)
                     .execute(wrap(response -> {
                         final List<Object> objList = new ArrayList<>();
@@ -377,7 +357,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
         checkIfIndexExists(wrap(response -> {
             final ClusterState state = clusterService.state();
             final DiscoveryNodes nodes = state.nodes();
-            final Iterator<DiscoveryNode> nodesIt = nodes.getCoordinatingOnlyNodes().valuesIt();
+            final Iterator<DiscoveryNode> nodesIt = nodes.getDataNodes().valuesIt();
             resetSync(nodesIt, listener);
         }, listener::onFailure));
     }
@@ -387,40 +367,29 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
             listener.onResponse(new ConfigResetSyncResponse(true));
         } else {
             final DiscoveryNode node = nodesIt.next();
-            if (node.isMasterNode() || node.isDataNode() || node.isIngestNode()) {
-                resetSync(nodesIt, listener);
-            } else {
-                transportService.sendRequest(node, ACTION_CONFIG_RESET, new ResetSyncRequest(),
-                        new TransportResponseHandler<ResetSyncResponse>() {
+            transportService.sendRequest(node, ACTION_CONFIG_RESET, new ResetSyncRequest(),
+                    new TransportResponseHandler<ResetSyncResponse>() {
 
-                            @Override
-                            public ResetSyncResponse read(final StreamInput in) throws IOException {
-                                return new ResetSyncResponse(in);
-                            }
+                        @Override
+                        public ResetSyncResponse read(StreamInput in) throws IOException {
+                            return new ResetSyncResponse(in);
+                        }
 
-                            @Override
-                            public void handleResponse(final ResetSyncResponse response) {
-                                resetSync(nodesIt, listener);
-                            }
+                        @Override
+                        public void handleResponse(final ResetSyncResponse response) {
+                            resetSync(nodesIt, listener);
+                        }
 
-                            @Override
-                            public void handleException(final TransportException exp) {
-                                if (exp.getCause() instanceof ActionNotFoundTransportException) {
-                                    if (logger.isDebugEnabled()) {
-                                        logger.debug("Node {} does not support ConfigSync.", node, exp);
-                                    }
-                                    resetSync(nodesIt, listener);
-                                } else {
-                                    listener.onFailure(exp);
-                                }
-                            }
+                        @Override
+                        public void handleException(final TransportException exp) {
+                            listener.onFailure(exp);
+                        }
 
-                            @Override
-                            public String executor() {
-                                return ThreadPool.Names.GENERIC;
-                            }
-                        });
-            }
+                        @Override
+                        public String executor() {
+                            return ThreadPool.Names.GENERIC;
+                        }
+                    });
         }
     }
 
@@ -451,7 +420,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
         checkIfIndexExists(wrap(response -> {
             final ClusterState state = clusterService.state();
             final DiscoveryNodes nodes = state.nodes();
-            final Iterator<DiscoveryNode> nodesIt = nodes.getCoordinatingOnlyNodes().valuesIt();
+            final Iterator<DiscoveryNode> nodesIt = nodes.getDataNodes().valuesIt();
             flushOnNode(nodesIt, listener);
         }, listener::onFailure));
     }
@@ -461,40 +430,29 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
             listener.onResponse(new ConfigFileFlushResponse(true));
         } else {
             final DiscoveryNode node = nodesIt.next();
-            if (node.isMasterNode() || node.isDataNode() || node.isIngestNode()) {
-                flushOnNode(nodesIt, listener);
-            } else {
-                transportService.sendRequest(node, ACTION_CONFIG_FLUSH, new FileFlushRequest(),
-                        new TransportResponseHandler<FileFlushResponse>() {
+            transportService.sendRequest(node, ACTION_CONFIG_FLUSH, new FileFlushRequest(),
+                    new TransportResponseHandler<FileFlushResponse>() {
 
-                            @Override
-                            public FileFlushResponse read(final StreamInput in) throws IOException {
-                                return new FileFlushResponse(in);
-                            }
+                        @Override
+                        public FileFlushResponse read(StreamInput in) throws IOException {
+                            return new FileFlushResponse(in);
+                        }
 
-                            @Override
-                            public void handleResponse(final FileFlushResponse response) {
-                                flushOnNode(nodesIt, listener);
-                            }
+                        @Override
+                        public void handleResponse(final FileFlushResponse response) {
+                            flushOnNode(nodesIt, listener);
+                        }
 
-                            @Override
-                            public void handleException(final TransportException exp) {
-                                if (exp.getCause() instanceof ActionNotFoundTransportException) {
-                                    if (logger.isDebugEnabled()) {
-                                        logger.debug("Node {} does not support ConfigSync.", node, exp);
-                                    }
-                                    flushOnNode(nodesIt, listener);
-                                } else {
-                                    listener.onFailure(exp);
-                                }
-                            }
+                        @Override
+                        public void handleException(final TransportException exp) {
+                            listener.onFailure(exp);
+                        }
 
-                            @Override
-                            public String executor() {
-                                return ThreadPool.Names.GENERIC;
-                            }
-                        });
-            }
+                        @Override
+                        public String executor() {
+                            return ThreadPool.Names.GENERIC;
+                        }
+                    });
         }
     }
 
@@ -512,9 +470,9 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
     }
 
     public void delete(final String path, final ActionListener<DeleteResponse> listener) {
-        checkIfIndexExists(wrap(
-                response -> client().prepareDelete(index, type, getId(path)).setRefreshPolicy(RefreshPolicy.IMMEDIATE).execute(listener),
-                listener::onFailure));
+        checkIfIndexExists(
+                wrap(response -> client().prepareDelete(index, type, getId(path)).setRefreshPolicy(RefreshPolicy.IMMEDIATE).execute(listener),
+                        listener::onFailure));
     }
 
     public void waitForStatus(final String waitForStatus, final String timeout, final ActionListener<ClusterHealthResponse> listener) {
@@ -618,7 +576,8 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
             final QueryBuilder queryBuilder =
                     QueryBuilders.boolQuery().filter(QueryBuilders.rangeQuery(TIMESTAMP).from(lastChecked.getTime()));
             lastChecked = now;
-            client().prepareSearch(index).setQuery(queryBuilder).setScroll(scrollForUpdate).setSize(sizeForUpdate).execute(this);
+            client().prepareSearch(index).setQuery(queryBuilder).setScroll(scrollForUpdate).setSize(sizeForUpdate)
+                    .execute(this);
         }
 
         public void terminate() {
@@ -678,6 +637,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
 
     public static class FileFlushRequest extends TransportRequest {
         FileFlushRequest() {
+            super();
         }
 
         FileFlushRequest(final StreamInput in) throws IOException {
@@ -718,6 +678,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
 
     public static class ResetSyncRequest extends TransportRequest {
         ResetSyncRequest() {
+            super();
         }
 
         ResetSyncRequest(final StreamInput in) throws IOException {

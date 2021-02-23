@@ -1,6 +1,0 @@
-configsync:
-  elasticsearch:
-    home: ""
-    modules:
-     - org.elasticsearch.transport.Netty4Plugin
-     - org.codelibs.elasticsearch.configsync.ConfigSyncPlugin
