@@ -1,9 +1,9 @@
-Elasticsearch Config Sync Plugin
+Elasticsearch Config Sync Module
 =======================
 
 ## Overview
 
-Config Sync Plugin provides a feature to distribute files, such as script or dictionary file, to nodes in your cluster.
+Config Sync Module provides a feature to distribute files, such as script or dictionary file, to nodes in your cluster.
 These files are managed in .configsync index, and each node sync up with them.
 
 ## Version
@@ -13,11 +13,19 @@ These files are managed in .configsync index, and each node sync up with them.
 ### Issues/Questions
 
 Please file an [issue](https://github.com/codelibs/elasticsearch-configsync/issues "issue").
-(Japanese forum is [here](https://github.com/codelibs/codelibs-ja-forum "here").)
 
 ## Installation
 
-    $ $ES_HOME/bin/elasticsearch-plugin install org.codelibs:elasticsearch-configsync:7.6.0
+### 7.11 -
+
+    $ CONFIGSYNC_URL=https://repo.maven.apache.org/maven2/org/codelibs/elasticsearch-configsync/7.11.0/elasticsearch-configsync-7.11.0.zip
+    $ curl -o /tmp/configsync.zip $CONFIGSYNC_URL
+    $ mkdir -p /usr/share/elasticsearch/modules/configsync
+    $ unzip -d /usr/share/elasticsearch/modules/configsync /tmp/configsync.zip
+
+### - 7.10
+
+    $ $ES_HOME/bin/elasticsearch-plugin install org.codelibs:elasticsearch-configsync:7.10.0
 
 ## Getting Started
 
