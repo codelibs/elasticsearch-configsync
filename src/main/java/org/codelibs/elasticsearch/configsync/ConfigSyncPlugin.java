@@ -102,4 +102,14 @@ public class ConfigSyncPlugin extends Plugin implements ActionPlugin, SystemInde
             this.configSyncService = configSyncService;
         }
     }
+
+    @Override
+    public String getFeatureName() {
+        return "configsync";
+    }
+
+    @Override
+    public String getFeatureDescription() {
+        return "Manages definitions and state for ConfigSync";
+    }
 }
