@@ -88,7 +88,7 @@ public class ConfigSyncPlugin extends Plugin implements ActionPlugin, SystemInde
 
     @Override
     public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings) {
-        return Collections.unmodifiableList(Arrays.asList(new SystemIndexDescriptor(".configsync", "Contains config sync data")));
+        return Collections.unmodifiableList(Arrays.asList(new SystemIndexDescriptor(".configsync*", "Contains config sync data")));
     }
 
     public static class PluginComponent {
