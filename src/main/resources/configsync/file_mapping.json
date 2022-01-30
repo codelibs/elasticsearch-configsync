@@ -1,5 +1,4 @@
 {
-  "file": {
     "properties": {
       "path": {
         "type": "keyword"
@@ -11,5 +10,4 @@
         "type": "date"
       }
     }
-  }
 }

@@ -15,10 +15,23 @@
  */
 package org.codelibs.elasticsearch.configsync.action;
 
-import org.elasticsearch.action.support.master.AcknowledgedResponse;
+import java.io.IOException;
 
-public class ConfigResetSyncResponse extends AcknowledgedResponse {
-    public ConfigResetSyncResponse(final boolean acknowledged) {
-        super(acknowledged);
+import org.elasticsearch.action.ActionRequest;
+import org.elasticsearch.action.ActionRequestValidationException;
+import org.elasticsearch.common.io.stream.StreamInput;
+
+public class FileFlushRequest extends ActionRequest {
+    FileFlushRequest() {
+    }
+
+    FileFlushRequest(final StreamInput in) throws IOException {
+        super(in);
+    }
+
+    @Override
+    public ActionRequestValidationException validate() {
+        // TODO Auto-generated method stub
+        return null;
     }
 }

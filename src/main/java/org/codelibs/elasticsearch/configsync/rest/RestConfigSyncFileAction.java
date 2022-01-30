@@ -1,3 +1,18 @@
+/*
+ * Copyright 2012-2022 CodeLibs Project and the Others.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language
+ * governing permissions and limitations under the License.
+ */
 package org.codelibs.elasticsearch.configsync.rest;
 
 import static java.util.Arrays.asList;
@@ -39,10 +54,8 @@ public class RestConfigSyncFileAction extends RestConfigSyncAction {
 
     @Override
     public List<Route> routes() {
-        return unmodifiableList(asList(
-                new Route(GET, "/_configsync/file"),
-                new Route(POST, "/_configsync/file"),
-                new Route(DELETE, "/_configsync/file")));
+        return unmodifiableList(
+                asList(new Route(GET, "/_configsync/file"), new Route(POST, "/_configsync/file"), new Route(DELETE, "/_configsync/file")));
     }
 
     @Override
@@ -80,15 +93,14 @@ public class RestConfigSyncFileAction extends RestConfigSyncAction {
                         params.put(fields.length == 0 ? "path" : "file", response);
                         sendResponse(channel, params);
                     }, e -> sendErrorResponse(channel, e)));
-                } else {
-                    return channel -> configSyncService.getContent(path, wrap(configContent -> {
-                        if (configContent != null) {
-                            channel.sendResponse(new BytesRestResponse(OK, "application/octet-stream", configContent));
-                        } else {
-                            channel.sendResponse(new BytesRestResponse(NOT_FOUND, path + " is not found."));
-                        }
-                    }, e -> sendErrorResponse(channel, e)));
                 }
+                return channel -> configSyncService.getContent(path, wrap(configContent -> {
+                    if (configContent != null) {
+                        channel.sendResponse(new BytesRestResponse(OK, "application/octet-stream", configContent));
+                    } else {
+                        channel.sendResponse(new BytesRestResponse(NOT_FOUND, path + " is not found."));
+                    }
+                }, e -> sendErrorResponse(channel, e)));
             }
             case POST: {
                 if (content == null) {

@@ -15,10 +15,13 @@
  */
 package org.codelibs.elasticsearch.configsync.action;
 
-import org.elasticsearch.action.support.master.AcknowledgedResponse;
+import org.elasticsearch.action.ActionType;
 
-public class ConfigResetSyncResponse extends AcknowledgedResponse {
-    public ConfigResetSyncResponse(final boolean acknowledged) {
-        super(acknowledged);
+public class FileFlushAction extends ActionType<FileFlushResponse> {
+    public static final FileFlushAction INSTANCE = new FileFlushAction();
+    public static final String NAME = "cluster:admin/configsync/flush";
+
+    private FileFlushAction() {
+        super(NAME, FileFlushResponse::new);
     }
 }

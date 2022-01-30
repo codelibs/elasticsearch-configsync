@@ -15,10 +15,18 @@
  */
 package org.codelibs.elasticsearch.configsync.action;
 
-import org.elasticsearch.action.support.master.AcknowledgedResponse;
+import java.io.IOException;
 
-public class ConfigResetSyncResponse extends AcknowledgedResponse {
-    public ConfigResetSyncResponse(final boolean acknowledged) {
+import org.elasticsearch.action.support.master.AcknowledgedResponse;
+import org.elasticsearch.common.io.stream.StreamInput;
+
+public class ResetSyncResponse extends AcknowledgedResponse {
+
+    ResetSyncResponse(final StreamInput in) throws IOException {
+        super(in);
+    }
+
+    ResetSyncResponse(final boolean acknowledged) {
         super(acknowledged);
     }
 }

@@ -1,22 +1,41 @@
+/*
+ * Copyright 2012-2022 CodeLibs Project and the Others.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language
+ * governing permissions and limitations under the License.
+ */
 package org.codelibs.elasticsearch.configsync;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
 
+import org.codelibs.elasticsearch.configsync.action.FileFlushAction;
+import org.codelibs.elasticsearch.configsync.action.ResetSyncAction;
+import org.codelibs.elasticsearch.configsync.action.TransportFileFlushAction;
+import org.codelibs.elasticsearch.configsync.action.TransportResetSyncAction;
 import org.codelibs.elasticsearch.configsync.rest.RestConfigSyncFileAction;
 import org.codelibs.elasticsearch.configsync.rest.RestConfigSyncFlushAction;
 import org.codelibs.elasticsearch.configsync.rest.RestConfigSyncResetAction;
 import org.codelibs.elasticsearch.configsync.rest.RestConfigSyncWaitAction;
 import org.codelibs.elasticsearch.configsync.service.ConfigSyncService;
+import org.elasticsearch.action.ActionRequest;
+import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.node.DiscoveryNodes;
 import org.elasticsearch.cluster.service.ClusterService;
-import org.elasticsearch.common.component.LifecycleComponent;
 import org.elasticsearch.common.io.stream.NamedWriteableRegistry;
 import org.elasticsearch.common.settings.ClusterSettings;
 import org.elasticsearch.common.settings.IndexScopedSettings;
@@ -25,10 +44,8 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.SettingsFilter;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.env.NodeEnvironment;
-import org.elasticsearch.indices.SystemIndexDescriptor;
 import org.elasticsearch.plugins.ActionPlugin;
 import org.elasticsearch.plugins.Plugin;
-import org.elasticsearch.plugins.SystemIndexPlugin;
 import org.elasticsearch.repositories.RepositoriesService;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestHandler;
@@ -37,15 +54,21 @@ import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.watcher.ResourceWatcherService;
 import org.elasticsearch.xcontent.NamedXContentRegistry;
 
-public class ConfigSyncPlugin extends Plugin implements ActionPlugin, SystemIndexPlugin {
+public class ConfigSyncPlugin extends Plugin implements ActionPlugin {
 
-    private final PluginComponent pluginComponent = new PluginComponent();
+    ConfigSyncService service;
 
     @Override
-    public List<RestHandler> getRestHandlers(final Settings settings, final RestController restController, final ClusterSettings clusterSettings,
-            final IndexScopedSettings indexScopedSettings, final SettingsFilter settingsFilter, final IndexNameExpressionResolver indexNameExpressionResolver,
-            final Supplier<DiscoveryNodes> nodesInCluster) {
-        final ConfigSyncService service = pluginComponent.getConfigSyncService();
+    public List<ActionHandler<? extends ActionRequest, ? extends ActionResponse>> getActions() {
+        return Arrays.asList(//
+                new ActionHandler<>(FileFlushAction.INSTANCE, TransportFileFlushAction.class), //
+                new ActionHandler<>(ResetSyncAction.INSTANCE, TransportResetSyncAction.class));
+    }
+
+    @Override
+    public List<RestHandler> getRestHandlers(final Settings settings, final RestController restController,
+            final ClusterSettings clusterSettings, final IndexScopedSettings indexScopedSettings, final SettingsFilter settingsFilter,
+            final IndexNameExpressionResolver indexNameExpressionResolver, final Supplier<DiscoveryNodes> nodesInCluster) {
         return Arrays.asList(//
                 new RestConfigSyncFileAction(settings, restController, service), //
                 new RestConfigSyncResetAction(settings, restController, service), //
@@ -54,21 +77,14 @@ public class ConfigSyncPlugin extends Plugin implements ActionPlugin, SystemInde
     }
 
     @Override
-    public Collection<Class<? extends LifecycleComponent>> getGuiceServiceClasses() {
-        final Collection<Class<? extends LifecycleComponent>> services = new ArrayList<>();
-        services.add(ConfigSyncService.class);
-        return services;
-    }
-
-    @Override
-    public Collection<Object> createComponents(Client client, ClusterService clusterService, ThreadPool threadPool,
-            ResourceWatcherService resourceWatcherService, ScriptService scriptService,
-            NamedXContentRegistry xContentRegistry, Environment environment,
-            NodeEnvironment nodeEnvironment, NamedWriteableRegistry namedWriteableRegistry,
-            IndexNameExpressionResolver indexNameExpressionResolver,
-            Supplier<RepositoriesService> repositoriesServiceSupplier) {
+    public Collection<Object> createComponents(final Client client, final ClusterService clusterService, final ThreadPool threadPool,
+            final ResourceWatcherService resourceWatcherService, final ScriptService scriptService,
+            final NamedXContentRegistry xContentRegistry, final Environment environment, final NodeEnvironment nodeEnvironment,
+            final NamedWriteableRegistry namedWriteableRegistry, final IndexNameExpressionResolver indexNameExpressionResolver,
+            final Supplier<RepositoriesService> repositoriesServiceSupplier) {
         final Collection<Object> components = new ArrayList<>();
-        components.add(pluginComponent);
+        service = new ConfigSyncService(client, clusterService, environment, threadPool);
+        components.add(service);
         return components;
     }
 
@@ -76,7 +92,6 @@ public class ConfigSyncPlugin extends Plugin implements ActionPlugin, SystemInde
     public List<Setting<?>> getSettings() {
         return Arrays.asList(//
                 ConfigSyncService.INDEX_SETTING, //
-                ConfigSyncService.TYPE_SETTING, //
                 ConfigSyncService.XPACK_SECURITY_SETTING, //
                 ConfigSyncService.CONFIG_PATH_SETTING, //
                 ConfigSyncService.SCROLL_TIME_SETTING, //
@@ -86,30 +101,4 @@ public class ConfigSyncPlugin extends Plugin implements ActionPlugin, SystemInde
         );
     }
 
-    @Override
-    public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings) {
-        return Collections.unmodifiableList(Arrays.asList(new SystemIndexDescriptor(".configsync*", "Contains config sync data")));
-    }
-
-    public static class PluginComponent {
-        private ConfigSyncService configSyncService;
-
-        public ConfigSyncService getConfigSyncService() {
-            return configSyncService;
-        }
-
-        public void setConfigSyncService(final ConfigSyncService configSyncService) {
-            this.configSyncService = configSyncService;
-        }
-    }
-
-    @Override
-    public String getFeatureName() {
-        return "configsync";
-    }
-
-    @Override
-    public String getFeatureDescription() {
-        return "Manages definitions and state for ConfigSync";
-    }
 }
