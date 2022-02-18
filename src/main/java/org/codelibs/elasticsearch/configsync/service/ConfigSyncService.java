@@ -50,6 +50,7 @@ import org.codelibs.elasticsearch.configsync.action.ConfigResetSyncResponse;
 import org.codelibs.elasticsearch.configsync.action.TransportFileFlushAction;
 import org.codelibs.elasticsearch.configsync.action.TransportResetSyncAction;
 import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.ElasticsearchSecurityException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
@@ -66,6 +67,8 @@ import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.component.AbstractLifecycleComponent;
 import org.elasticsearch.common.component.LifecycleListener;
 import org.elasticsearch.common.io.Streams;
+import org.elasticsearch.common.settings.SecureSetting;
+import org.elasticsearch.common.settings.SecureString;
 import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.settings.Setting.Property;
 import org.elasticsearch.common.settings.Settings;
@@ -103,8 +106,11 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
     public static final Setting<String> INDEX_SETTING =
             new Setting<>("configsync.index", s -> "configsync", Function.identity(), Property.NodeScope);
 
-    public static final Setting<String> XPACK_SECURITY_SETTING =
-            new Setting<>("configsync.xpack.security.user", s -> "", ConfigSyncService::xpackSecurityToken, Property.NodeScope);
+    public static final Setting<String> XPACK_SECURITY_USER_SETTING =
+            new Setting<>("configsync.xpack.security.user", s -> "elastic", Function.identity(), Property.NodeScope);
+
+    public static final Setting<SecureString> XPACK_SECURITY_PASSWORD_SETTING =
+            SecureSetting.secureString("configsync.xpack.security.password", null);
 
     private static final String FILE_MAPPING_JSON = "configsync/file_mapping.json";
 
@@ -132,13 +138,13 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
 
     private final ClusterService clusterService;
 
-    private volatile ScheduledCancellable scheduledCancellable;
+    private ScheduledCancellable scheduledCancellable;
 
     private final boolean fileUpdaterEnabled;
 
-    private final TimeValue flushInterval;
-
     private final String authorizationToken;
+
+    private final TimeValue flushInterval;
 
     private TransportFileFlushAction fileFlushAction;
 
@@ -152,7 +158,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
         return "Basic " + basicAuth;
     }
 
-    public ConfigSyncService(final Client client, final ClusterService clusterService, final Environment env, final ThreadPool threadPool) {
+    public ConfigSyncService(final Client client, final ClusterService clusterService, final Environment environment, final ThreadPool threadPool) {
         this.client = client;
         this.clusterService = clusterService;
         this.threadPool = threadPool;
@@ -161,18 +167,26 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
             logger.debug("Creating ConfigSyncService");
         }
 
-        final Settings settings = env.settings();
+        final Settings settings = environment.settings();
 
         index = INDEX_SETTING.get(settings);
         configPath = CONFIG_PATH_SETTING.get(settings);
         if (configPath.length() == 0) {
-            configPath = env.configFile().toFile().getAbsolutePath();
+            configPath = environment.configFile().toFile().getAbsolutePath();
         }
         scrollForUpdate = SCROLL_TIME_SETTING.get(settings);
         sizeForUpdate = SCROLL_SIZE_SETTING.get(settings);
         fileUpdaterEnabled = FILE_UPDATER_ENABLED_SETTING.get(settings);
         flushInterval = FLUSH_INTERVAL_SETTING.get(settings);
-        authorizationToken = XPACK_SECURITY_SETTING.get(settings);
+        try (final SecureString password = XPACK_SECURITY_PASSWORD_SETTING.get(settings)) {
+            if (password.length() > 0) {
+                final String user = XPACK_SECURITY_USER_SETTING.get(settings);
+                authorizationToken = xpackSecurityToken(user + ":" + password.toString());
+                logger.info("Created authorization token for {}", user);
+            } else {
+                authorizationToken = "";
+            }
+        }
     }
 
     private Client client() {
@@ -231,7 +245,13 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
                     }
                 }
             }, e -> {
-                logger.warn("Could not create .configsync. Retrying to start it.", e);
+                if (e instanceof ElasticsearchSecurityException) {
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Could not create configsync. Retrying to start it.", e);
+                    }
+                } else {
+                    logger.warn("Could not create configsync. Retrying to start it.", e);
+                }
                 threadPool.schedule(this::waitForClusterReady, TimeValue.timeValueSeconds(15), Names.GENERIC);
             }));
         }, e -> {
