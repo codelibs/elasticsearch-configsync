@@ -33,7 +33,7 @@ import java.util.Map;
 
 import org.codelibs.elasticsearch.configsync.service.ConfigSyncService;
 import org.elasticsearch.ElasticsearchException;
-import org.elasticsearch.client.node.NodeClient;
+import org.elasticsearch.client.internal.node.NodeClient;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;

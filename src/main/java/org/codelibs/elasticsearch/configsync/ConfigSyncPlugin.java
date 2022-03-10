@@ -32,7 +32,7 @@ import org.codelibs.elasticsearch.configsync.rest.RestConfigSyncWaitAction;
 import org.codelibs.elasticsearch.configsync.service.ConfigSyncService;
 import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.ActionResponse;
-import org.elasticsearch.client.Client;
+import org.elasticsearch.client.internal.Client;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.node.DiscoveryNodes;
 import org.elasticsearch.cluster.service.ClusterService;
