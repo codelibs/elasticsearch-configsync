@@ -363,7 +363,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
         checkIfIndexExists(wrap(response -> {
             final ClusterState state = clusterService.state();
             final DiscoveryNodes nodes = state.nodes();
-            final Iterator<DiscoveryNode> nodesIt = nodes.getDataNodes().valuesIt();
+            final Iterator<DiscoveryNode> nodesIt = nodes.getDataNodes().values().iterator();
             resetSync(nodesIt, listener);
         }, listener::onFailure));
     }
@@ -403,7 +403,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
         checkIfIndexExists(wrap(response -> {
             final ClusterState state = clusterService.state();
             final DiscoveryNodes nodes = state.nodes();
-            final Iterator<DiscoveryNode> nodesIt = nodes.getDataNodes().valuesIt();
+            final Iterator<DiscoveryNode> nodesIt = nodes.getDataNodes().values().iterator();
             flushOnNode(nodesIt, listener);
         }, listener::onFailure));
     }
