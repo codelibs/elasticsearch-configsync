@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.codelibs</groupId>
 	<artifactId>elasticsearch-configsync</artifactId>
-	<version>8.3.2.1-SNAPSHOT</version>
+	<version>8.3.3.0-SNAPSHOT</version>
 	<packaging>jar</packaging>
 	<description>This plugin provides a feature to analyze texts.</description>
 	<inceptionYear>2011</inceptionYear>
@@ -27,7 +27,7 @@
 		<version>9</version>
 	</parent>
 	<properties>
-		<elasticsearch.version>8.3.2</elasticsearch.version>
+		<elasticsearch.version>8.3.3</elasticsearch.version>
 		<elasticsearch.plugin.classname>org.codelibs.elasticsearch.configsync.ConfigSyncPlugin</elasticsearch.plugin.classname>
 		<log4j.version>2.17.1</log4j.version>
 		<maven.compiler.release>17</maven.compiler.release>
