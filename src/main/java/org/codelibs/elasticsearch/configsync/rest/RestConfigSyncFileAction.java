@@ -34,12 +34,13 @@ import java.util.Map;
 import org.codelibs.elasticsearch.configsync.service.ConfigSyncService;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.client.internal.node.NodeClient;
+import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
+import org.elasticsearch.rest.RestResponse;
 import org.elasticsearch.search.lookup.SourceLookup;
 import org.elasticsearch.search.sort.SortOrder;
 
@@ -96,9 +97,9 @@ public class RestConfigSyncFileAction extends RestConfigSyncAction {
                 }
                 return channel -> configSyncService.getContent(path, wrap(configContent -> {
                     if (configContent != null) {
-                        channel.sendResponse(new BytesRestResponse(OK, "application/octet-stream", configContent));
+                        channel.sendResponse(new RestResponse(OK, "application/octet-stream", new BytesArray(configContent)));
                     } else {
-                        channel.sendResponse(new BytesRestResponse(NOT_FOUND, path + " is not found."));
+                        channel.sendResponse(new RestResponse(NOT_FOUND, path + " is not found."));
                     }
                 }, e -> sendErrorResponse(channel, e)));
             }

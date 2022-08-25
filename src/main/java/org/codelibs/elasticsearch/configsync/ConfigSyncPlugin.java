@@ -51,6 +51,7 @@ import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestHandler;
 import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.threadpool.ThreadPool;
+import org.elasticsearch.tracing.Tracer;
 import org.elasticsearch.watcher.ResourceWatcherService;
 import org.elasticsearch.xcontent.NamedXContentRegistry;
 
@@ -81,7 +82,7 @@ public class ConfigSyncPlugin extends Plugin implements ActionPlugin {
             final ResourceWatcherService resourceWatcherService, final ScriptService scriptService,
             final NamedXContentRegistry xContentRegistry, final Environment environment, final NodeEnvironment nodeEnvironment,
             final NamedWriteableRegistry namedWriteableRegistry, final IndexNameExpressionResolver indexNameExpressionResolver,
-            final Supplier<RepositoriesService> repositoriesServiceSupplier) {
+            final Supplier<RepositoriesService> repositoriesServiceSupplier, final Tracer tracer) {
         final Collection<Object> components = new ArrayList<>();
         service = new ConfigSyncService(client, clusterService, environment, threadPool);
         components.add(service);

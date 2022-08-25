@@ -24,8 +24,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.rest.BaseRestHandler;
-import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestChannel;
+import org.elasticsearch.rest.RestResponse;
 import org.elasticsearch.xcontent.XContentBuilder;
 import org.elasticsearch.xcontent.json.JsonXContent;
 
@@ -44,7 +44,7 @@ public abstract class RestConfigSyncAction extends BaseRestHandler {
                 }
             }
             builder.endObject();
-            channel.sendResponse(new BytesRestResponse(OK, builder));
+            channel.sendResponse(new RestResponse(OK, builder));
         } catch (final IOException e) {
             throw new ElasticsearchException("Failed to create a resposne.", e);
         }
@@ -52,7 +52,7 @@ public abstract class RestConfigSyncAction extends BaseRestHandler {
 
     protected void sendErrorResponse(final RestChannel channel, final Exception e) {
         try {
-            channel.sendResponse(new BytesRestResponse(channel, e));
+            channel.sendResponse(new RestResponse(channel, e));
         } catch (final Exception e1) {
             logger.error("Failed to send a failure response.", e1);
         }
