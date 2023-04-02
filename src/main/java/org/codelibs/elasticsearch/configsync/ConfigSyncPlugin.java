@@ -35,7 +35,7 @@ import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.client.internal.Client;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.node.DiscoveryNodes;
-import org.elasticsearch.cluster.routing.allocation.decider.AllocationDeciders;
+import org.elasticsearch.cluster.routing.allocation.AllocationService;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.io.stream.NamedWriteableRegistry;
 import org.elasticsearch.common.settings.ClusterSettings;
@@ -84,7 +84,7 @@ public class ConfigSyncPlugin extends Plugin implements ActionPlugin {
             final NamedXContentRegistry xContentRegistry, final Environment environment, final NodeEnvironment nodeEnvironment,
             final NamedWriteableRegistry namedWriteableRegistry, final IndexNameExpressionResolver indexNameExpressionResolver,
             final Supplier<RepositoriesService> repositoriesServiceSupplier, final Tracer tracer,
-            final AllocationDeciders allocationDeciders) {
+            final AllocationService allocationService) {
         final Collection<Object> components = new ArrayList<>();
         service = new ConfigSyncService(client, clusterService, environment, threadPool);
         components.add(service);

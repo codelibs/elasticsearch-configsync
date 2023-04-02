@@ -41,7 +41,7 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestResponse;
-import org.elasticsearch.search.lookup.SourceLookup;
+import org.elasticsearch.search.lookup.Source;
 import org.elasticsearch.search.sort.SortOrder;
 
 public class RestConfigSyncFileAction extends RestConfigSyncAction {
@@ -69,7 +69,7 @@ public class RestConfigSyncFileAction extends RestConfigSyncAction {
                 if (request.param(ConfigSyncService.PATH) != null) {
                     path = request.param(ConfigSyncService.PATH);
                 } else if (content != null && content.length() > 0) {
-                    final Map<String, Object> sourceAsMap = SourceLookup.sourceAsMap(content);
+                    final Map<String, Object> sourceAsMap = Source.fromBytes(content).source();
                     path = (String) sourceAsMap.get(ConfigSyncService.PATH);
                 } else {
                     path = null;
@@ -116,7 +116,7 @@ public class RestConfigSyncFileAction extends RestConfigSyncAction {
                         contentArray = out.toByteArray();
                     }
                 } else {
-                    final Map<String, Object> sourceAsMap = SourceLookup.sourceAsMap(content);
+                    final Map<String, Object> sourceAsMap = Source.fromBytes(content).source();
                     path = (String) sourceAsMap.get(ConfigSyncService.PATH);
                     final String fileContent = (String) sourceAsMap.get(ConfigSyncService.CONTENT);
                     contentArray = Base64.getDecoder().decode(fileContent);
@@ -129,7 +129,7 @@ public class RestConfigSyncFileAction extends RestConfigSyncAction {
                 if (request.param(ConfigSyncService.PATH) != null) {
                     path = request.param(ConfigSyncService.PATH);
                 } else if (content != null && content.length() > 0) {
-                    final Map<String, Object> sourceAsMap = SourceLookup.sourceAsMap(content);
+                    final Map<String, Object> sourceAsMap = Source.fromBytes(content).source();
                     path = (String) sourceAsMap.get(ConfigSyncService.PATH);
                 } else {
                     path = null;
