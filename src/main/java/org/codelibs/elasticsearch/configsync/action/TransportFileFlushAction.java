@@ -19,6 +19,7 @@ import static org.elasticsearch.action.ActionListener.wrap;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.concurrent.Executor;
 
 import org.codelibs.elasticsearch.configsync.service.ConfigSyncService;
 import org.elasticsearch.action.ActionListener;
@@ -77,8 +78,8 @@ public class TransportFileFlushAction extends HandledTransportAction<FileFlushRe
             }
 
             @Override
-            public String executor() {
-                return ThreadPool.Names.GENERIC;
+            public Executor executor(final ThreadPool threadPool) {
+                return threadPool.generic();
             }
         });
     }

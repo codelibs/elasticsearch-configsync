@@ -45,6 +45,7 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.SettingsFilter;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.env.NodeEnvironment;
+import org.elasticsearch.indices.IndicesService;
 import org.elasticsearch.plugins.ActionPlugin;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.repositories.RepositoriesService;
@@ -84,7 +85,7 @@ public class ConfigSyncPlugin extends Plugin implements ActionPlugin {
             final NamedXContentRegistry xContentRegistry, final Environment environment, final NodeEnvironment nodeEnvironment,
             final NamedWriteableRegistry namedWriteableRegistry, final IndexNameExpressionResolver indexNameExpressionResolver,
             final Supplier<RepositoriesService> repositoriesServiceSupplier, final Tracer tracer,
-            final AllocationService allocationService) {
+            final AllocationService allocationService, final IndicesService indicesService) {
         final Collection<Object> components = new ArrayList<>();
         service = new ConfigSyncService(client, clusterService, environment, threadPool);
         components.add(service);
