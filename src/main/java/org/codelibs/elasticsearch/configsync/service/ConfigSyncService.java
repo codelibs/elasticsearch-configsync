@@ -53,9 +53,9 @@ import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ElasticsearchSecurityException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ActionResponse;
+import org.elasticsearch.action.DocWriteResponse;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.action.delete.DeleteResponse;
-import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.support.WriteRequest.RefreshPolicy;
 import org.elasticsearch.client.internal.Client;
@@ -210,7 +210,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
                 logger.debug("ConfigFileUpdater is not scheduled.");
             }
         } else {
-            scheduledCancellable = threadPool.schedule(configFileUpdater, interval, Names.SAME);
+            scheduledCancellable = threadPool.schedule(configFileUpdater, interval, threadPool.executor(Names.SAME));
             if (logger.isDebugEnabled()) {
                 logger.debug("Scheduled ConfigFileUpdater with {}", interval);
             }
@@ -252,11 +252,11 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
                 } else {
                     logger.warn("Could not create configsync. Retrying to start it.", e);
                 }
-                threadPool.schedule(this::waitForClusterReady, TimeValue.timeValueSeconds(15), Names.GENERIC);
+                threadPool.schedule(this::waitForClusterReady, TimeValue.timeValueSeconds(15), threadPool.generic());
             }));
         }, e -> {
             logger.warn("Could not start ConfigFileUpdater. Retrying to start it.", e);
-            threadPool.schedule(this::waitForClusterReady, TimeValue.timeValueSeconds(15), Names.GENERIC);
+            threadPool.schedule(this::waitForClusterReady, TimeValue.timeValueSeconds(15), threadPool.generic());
         }));
     }
 
@@ -314,7 +314,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
     protected void doClose() {
     }
 
-    public void store(final String path, final byte[] contentArray, final ActionListener<IndexResponse> listener) {
+    public void store(final String path, final byte[] contentArray, final ActionListener<DocWriteResponse> listener) {
         checkIfIndexExists(wrap(response -> {
             try {
                 final String id = getId(path);
