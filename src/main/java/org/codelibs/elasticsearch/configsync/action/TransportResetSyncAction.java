@@ -28,6 +28,7 @@ import org.elasticsearch.action.support.HandledTransportAction;
 import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.io.stream.StreamInput;
+import org.elasticsearch.common.util.concurrent.EsExecutors;
 import org.elasticsearch.tasks.Task;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportException;
@@ -43,7 +44,7 @@ public class TransportResetSyncAction extends HandledTransportAction<ResetSyncRe
     @Inject
     public TransportResetSyncAction(final TransportService transportService, final ActionFilters actionFilters,
             final ConfigSyncService configSyncService) {
-        super(ResetSyncAction.NAME, transportService, actionFilters, ResetSyncRequest::new);
+        super(ResetSyncAction.NAME, transportService, actionFilters, ResetSyncRequest::new, EsExecutors.DIRECT_EXECUTOR_SERVICE);
         this.transportService = transportService;
         this.configSyncService = configSyncService;
         configSyncService.setResetSyncAction(this);

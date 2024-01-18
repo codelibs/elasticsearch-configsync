@@ -32,30 +32,17 @@ import org.codelibs.elasticsearch.configsync.rest.RestConfigSyncWaitAction;
 import org.codelibs.elasticsearch.configsync.service.ConfigSyncService;
 import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.ActionResponse;
-import org.elasticsearch.client.internal.Client;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.node.DiscoveryNodes;
-import org.elasticsearch.cluster.routing.allocation.AllocationService;
-import org.elasticsearch.cluster.service.ClusterService;
-import org.elasticsearch.common.io.stream.NamedWriteableRegistry;
 import org.elasticsearch.common.settings.ClusterSettings;
 import org.elasticsearch.common.settings.IndexScopedSettings;
 import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.SettingsFilter;
-import org.elasticsearch.env.Environment;
-import org.elasticsearch.env.NodeEnvironment;
-import org.elasticsearch.indices.IndicesService;
 import org.elasticsearch.plugins.ActionPlugin;
 import org.elasticsearch.plugins.Plugin;
-import org.elasticsearch.repositories.RepositoriesService;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestHandler;
-import org.elasticsearch.script.ScriptService;
-import org.elasticsearch.telemetry.TelemetryProvider;
-import org.elasticsearch.threadpool.ThreadPool;
-import org.elasticsearch.watcher.ResourceWatcherService;
-import org.elasticsearch.xcontent.NamedXContentRegistry;
 
 public class ConfigSyncPlugin extends Plugin implements ActionPlugin {
 
@@ -80,14 +67,9 @@ public class ConfigSyncPlugin extends Plugin implements ActionPlugin {
     }
 
     @Override
-    public Collection<Object> createComponents(final Client client, final ClusterService clusterService, final ThreadPool threadPool,
-            final ResourceWatcherService resourceWatcherService, final ScriptService scriptService,
-            final NamedXContentRegistry xContentRegistry, final Environment environment, final NodeEnvironment nodeEnvironment,
-            final NamedWriteableRegistry namedWriteableRegistry, final IndexNameExpressionResolver indexNameExpressionResolver,
-            final Supplier<RepositoriesService> repositoriesServiceSupplier, final TelemetryProvider telemetryProvider,
-            final AllocationService allocationService, final IndicesService indicesService) {
+    public Collection<?> createComponents(PluginServices services) {
         final Collection<Object> components = new ArrayList<>();
-        service = new ConfigSyncService(client, clusterService, environment, threadPool);
+        service = new ConfigSyncService(services.client(), services.clusterService(), services.environment(), services.threadPool());
         components.add(service);
         return components;
     }
