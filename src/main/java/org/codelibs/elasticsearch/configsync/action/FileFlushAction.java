@@ -22,6 +22,6 @@ public class FileFlushAction extends ActionType<FileFlushResponse> {
     public static final String NAME = "cluster:admin/configsync/flush";
 
     private FileFlushAction() {
-        super(NAME, FileFlushResponse::new);
+        super(NAME);
     }
 }

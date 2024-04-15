@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import org.codelibs.elasticsearch.configsync.action.FileFlushAction;
@@ -34,11 +35,13 @@ import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.node.DiscoveryNodes;
+import org.elasticsearch.common.io.stream.NamedWriteableRegistry;
 import org.elasticsearch.common.settings.ClusterSettings;
 import org.elasticsearch.common.settings.IndexScopedSettings;
 import org.elasticsearch.common.settings.Setting;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.SettingsFilter;
+import org.elasticsearch.features.NodeFeature;
 import org.elasticsearch.plugins.ActionPlugin;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.rest.RestController;
@@ -56,9 +59,10 @@ public class ConfigSyncPlugin extends Plugin implements ActionPlugin {
     }
 
     @Override
-    public List<RestHandler> getRestHandlers(final Settings settings, final RestController restController,
-            final ClusterSettings clusterSettings, final IndexScopedSettings indexScopedSettings, final SettingsFilter settingsFilter,
-            final IndexNameExpressionResolver indexNameExpressionResolver, final Supplier<DiscoveryNodes> nodesInCluster) {
+    public List<RestHandler> getRestHandlers(final Settings settings, final NamedWriteableRegistry namedWriteableRegistry,
+            final RestController restController, final ClusterSettings clusterSettings, final IndexScopedSettings indexScopedSettings,
+            final SettingsFilter settingsFilter, final IndexNameExpressionResolver indexNameExpressionResolver,
+            final Supplier<DiscoveryNodes> nodesInCluster, final Predicate<NodeFeature> clusterSupportsFeature) {
         return Arrays.asList(//
                 new RestConfigSyncFileAction(settings, restController, service), //
                 new RestConfigSyncResetAction(settings, restController, service), //
@@ -67,7 +71,7 @@ public class ConfigSyncPlugin extends Plugin implements ActionPlugin {
     }
 
     @Override
-    public Collection<?> createComponents(PluginServices services) {
+    public Collection<?> createComponents(final PluginServices services) {
         final Collection<Object> components = new ArrayList<>();
         service = new ConfigSyncService(services.client(), services.clusterService(), services.environment(), services.threadPool());
         components.add(service);

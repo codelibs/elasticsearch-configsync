@@ -22,6 +22,6 @@ public class ResetSyncAction extends ActionType<ResetSyncResponse> {
     public static final String NAME = "cluster:admin/configsync/reset_sync";
 
     private ResetSyncAction() {
-        super(NAME, ResetSyncResponse::new);
+        super(NAME);
     }
 }

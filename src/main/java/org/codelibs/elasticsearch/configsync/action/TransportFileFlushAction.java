@@ -30,7 +30,6 @@ import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.util.concurrent.EsExecutors;
 import org.elasticsearch.tasks.Task;
-import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportException;
 import org.elasticsearch.transport.TransportResponseHandler;
 import org.elasticsearch.transport.TransportService;
@@ -79,8 +78,8 @@ public class TransportFileFlushAction extends HandledTransportAction<FileFlushRe
             }
 
             @Override
-            public Executor executor(final ThreadPool threadPool) {
-                return threadPool.generic();
+            public Executor executor() {
+                return TRANSPORT_WORKER;
             }
         });
     }
