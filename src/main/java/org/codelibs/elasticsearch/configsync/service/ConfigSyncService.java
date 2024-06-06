@@ -210,7 +210,7 @@ public class ConfigSyncService extends AbstractLifecycleComponent {
                 logger.debug("ConfigFileUpdater is not scheduled.");
             }
         } else {
-            scheduledCancellable = threadPool.schedule(configFileUpdater, interval, threadPool.executor(Names.SAME));
+            scheduledCancellable = threadPool.schedule(configFileUpdater, interval, threadPool.executor(Names.GENERIC));
             if (logger.isDebugEnabled()) {
                 logger.debug("Scheduled ConfigFileUpdater with {}", interval);
             }
